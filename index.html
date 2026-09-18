@@ -1,0 +1,988 @@
+<title>时间统计本</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --surface2:#F7F8FA; --ink:#172033; --muted:#6B7484; --line:#DCE1E8; --line2:#EDF0F4;
+  --accent:#2A55C4; --accent-ink:#FFFFFF; --accent-soft:#E4EAFB;
+  --ok:#1E8E5A; --ok-soft:#E1F4EA; --danger:#D23F3F; --danger-soft:#FBE6E6; --warn:#B8860B; --warn-soft:#FBF3D9;
+  --c1a:#2A55C4; --c1b:#E0872B; --c1c:#8A8F98; --c1d:#1E8E5A; --c1e:#9B51B6;
+  --shadow:0 6px 24px rgba(23,32,51,.10);
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei","Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1419; --surface:#171D26; --surface2:#1C2330; --ink:#E8ECF2; --muted:#98A2B3; --line:#2A3340; --line2:#222A36;
+    --accent:#6F94FF; --accent-ink:#0B1226; --accent-soft:#1E2A4A;
+    --ok:#4CC38A; --ok-soft:#173327; --danger:#F0625E; --danger-soft:#3A1E1E; --warn:#E0B84A; --warn-soft:#3A3117;
+    --c1a:#6F94FF; --c1b:#F0A050; --c1c:#8A93A3; --c1d:#4CC38A; --c1e:#BD7FD6;
+    --shadow:0 6px 24px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1419; --surface:#171D26; --surface2:#1C2330; --ink:#E8ECF2; --muted:#98A2B3; --line:#2A3340; --line2:#222A36;
+  --accent:#6F94FF; --accent-ink:#0B1226; --accent-soft:#1E2A4A;
+  --ok:#4CC38A; --ok-soft:#173327; --danger:#F0625E; --danger-soft:#3A1E1E; --warn:#E0B84A; --warn-soft:#3A3117;
+  --c1a:#6F94FF; --c1b:#F0A050; --c1c:#8A93A3; --c1d:#4CC38A; --c1e:#BD7FD6;
+  --shadow:0 6px 24px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+#app{height:100%;display:flex;flex-direction:column;max-width:560px;margin:0 auto;position:relative;background:var(--bg)}
+@media (min-width:600px){#app{border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+.hdr{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 16px 8px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line2)}
+.hdr h1{font-family:var(--serif);font-size:20px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdr .sub{font-size:12px;color:var(--muted);font-weight:400;font-family:var(--sans);margin-left:6px}
+.iconbtn{width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);background:var(--surface);border:1px solid var(--line);font-size:16px;flex:none}
+.iconbtn.ghost{background:none;border-color:transparent}
+.iconbtn:active{transform:scale(.96)}
+.main{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 16px 96px;-webkit-overflow-scrolling:touch}
+.tabbar{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--line);padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px))}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;color:var(--muted);padding:4px 0;position:relative}
+.tab .ic{font-size:20px;line-height:1}
+.tab.on{color:var(--accent);font-weight:600}
+.badge{position:absolute;top:-2px;left:calc(50% + 8px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font-size:11px;line-height:18px;text-align:center;font-family:var(--mono)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.card + .card{margin-top:12px}
+.sec{margin-top:18px}
+.sec-h{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}
+.sec-h h2{font-size:13px;letter-spacing:.06em;color:var(--muted);font-weight:600;text-transform:uppercase}
+.sec-h .cnt{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.sec-h .sp{flex:1}
+.lnk{color:var(--accent);font-size:13px;font-weight:500}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:14px;white-space:nowrap}
+.btn.sec2{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.soft{background:var(--accent-soft);color:var(--accent)}
+.btn.danger{background:var(--danger-soft);color:var(--danger)}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;align-items:center;gap:10px}
+.row.wrap{flex-wrap:wrap}
+.sp{flex:1}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+.empty{padding:22px 12px;text-align:center;color:var(--muted);font-size:14px;border:1px dashed var(--line);border-radius:14px}
+.empty .btn{margin-top:10px}
+/* switcher */
+.switch{display:flex;align-items:center;justify-content:center;gap:8px;margin:2px 0 12px}
+.switch .val{font-family:var(--serif);font-size:18px;font-weight:600;min-width:120px;text-align:center}
+/* nine grid */
+.grid9{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cell{aspect-ratio:1/1;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:4px;text-align:left;overflow:hidden;position:relative;min-width:0}
+.cell .lb{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em}
+.cell .tx{font-size:13px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;white-space:pre-line;word-break:break-all}
+.cell .tx.ph{color:var(--muted);opacity:.6}
+.cell.filled{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cell .dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.cell.core{background:var(--ink);color:var(--bg);border-color:var(--ink);align-items:center;justify-content:center;text-align:center}
+.cell.core .lb{color:var(--bg);opacity:.7}
+.cell.core .tx{font-family:var(--serif);font-size:24px;font-weight:700;-webkit-line-clamp:2;color:var(--bg)}
+.cell.core .tx.ph{color:var(--bg);opacity:.5;font-size:14px;font-family:var(--sans)}
+/* week strip */
+.wstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
+.wd{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0;border-radius:10px;border:1px solid transparent;position:relative}
+.wd .n{font-family:var(--mono);font-size:16px;font-weight:500}
+.wd .w{font-size:11px;color:var(--muted)}
+.wd.today .n{color:var(--accent)}
+.wd.sel{background:var(--accent);color:var(--accent-ink)}
+.wd.sel .w,.wd.sel .n{color:var(--accent-ink)}
+.wd .pip{position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--danger)}
+.wd.sel .pip{background:var(--accent-ink)}
+/* lists */
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-top:1px solid var(--line2);min-height:48px}
+.item:first-child{border-top:0}
+.item .t{flex:1;min-width:0}
+.item .t .n{font-size:15px;word-break:break-word}
+.item .t .m{font-size:12px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+.item.done .t .n{text-decoration:line-through;color:var(--muted)}
+.chk{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none;color:#fff;font-size:13px}
+.chk.on{background:var(--ok);border-color:var(--ok)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:11px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.acc{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.chip.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.chip.dg{background:var(--danger-soft);color:var(--danger);border-color:transparent}
+.chip.wn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip.btn2{cursor:pointer;color:var(--ink)}
+.chip.btn2.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fab{position:absolute;right:18px;bottom:calc(74px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:28px;box-shadow:var(--shadow);z-index:7;display:flex;align-items:center;justify-content:center}
+/* forms */
+.f{display:flex;flex-direction:column;gap:5px;margin-top:12px}
+.f label{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.03em}
+.in,select.in,textarea.in{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface2);color:var(--ink);font-size:15px}
+textarea.in{min-height:88px;resize:vertical;line-height:1.5}
+.in.mono{font-family:var(--mono);font-size:17px;letter-spacing:.04em}
+.in.err{border-color:var(--danger);background:var(--danger-soft)}
+.seg{display:inline-flex;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{padding:6px 12px;border-radius:8px;font-size:13px;color:var(--muted);font-weight:500}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.seg.block{display:flex}.seg.block button{flex:1}
+.hint{font-size:12px;color:var(--muted)}
+.errtxt{font-size:12px;color:var(--danger)}
+/* sheet */
+.overlay{position:fixed;inset:0;background:rgba(10,14,22,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:92%;background:var(--surface);border-radius:18px 18px 0 0;padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));overflow-y:auto;box-shadow:var(--shadow)}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:4px auto 10px}
+.sheet h2{font-family:var(--serif);font-size:18px;font-weight:600}
+.sheet .acts{display:flex;gap:8px;margin-top:18px}
+.sheet .acts .btn{flex:1}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .22s ease-out}@keyframes up{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:13px;z-index:30;box-shadow:var(--shadow);max-width:90%}
+.toast.err{background:var(--danger);color:#fff}
+/* menu */
+.menu .item{cursor:pointer}
+.menu .ic{width:34px;height:34px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.menu .arr{color:var(--muted)}
+/* ledger */
+.ledger{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.lday{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border-top:1px solid var(--line);font-size:13px}
+.lday:first-child{border-top:0}
+.lday .d{font-weight:600}
+.lrow{display:grid;grid-template-columns:44px 44px 1fr auto;gap:8px;padding:8px 12px;border-top:1px solid var(--line2);align-items:center;font-size:13px}
+.lrow .tm{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.lrow .nt{min-width:0}
+.lrow .nt .n{font-size:14px;word-break:break-all}
+.lrow .nt .c{font-size:11px;color:var(--muted);margin-top:1px}
+.lrow .nt .c b{font-weight:500;color:var(--ink)}
+.lrow .dur{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.lrow.end{background:var(--ok-soft)}
+.lrow.bad{background:var(--danger-soft)}
+.lrow .bad-t{color:var(--danger)}
+.lrow.sel{outline:2px solid var(--accent);outline-offset:-2px}
+.chk-ok{color:var(--ok);font-family:var(--mono);font-size:12px}
+.chk-bad{color:var(--danger);font-family:var(--mono);font-size:12px;font-weight:600}
+/* stats */
+.kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi .k{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.kpi .k .v{font-family:var(--mono);font-size:18px;font-weight:600}
+.kpi .k .l{font-size:11px;color:var(--muted);margin-top:2px}
+.bar{height:8px;border-radius:4px;background:var(--line2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.brow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line2)}
+.brow:first-child{border-top:0}
+.brow .nm{flex:1;min-width:0;font-size:14px}
+.brow .bar{width:90px;flex:none}
+.brow .v{font-family:var(--mono);font-size:12px;color:var(--muted);width:76px;text-align:right;flex:none}
+.brow .pc{font-family:var(--mono);font-size:12px;width:44px;text-align:right;flex:none}
+.brow.lvl2{padding-left:16px}.brow.lvl3{padding-left:32px;font-size:13px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:11px;color:var(--muted);text-align:left;font-weight:600;letter-spacing:.04em;padding:6px 4px;border-bottom:1px solid var(--line)}
+.tbl td{padding:7px 4px;border-bottom:1px solid var(--line2)}
+.tbl td.n{font-family:var(--mono);text-align:right}
+.tbl th.n{text-align:right}
+.tblwrap{overflow-x:auto}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:10px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+/* timer */
+.timer{text-align:center;padding:18px 0 6px}
+.timer .big{font-family:var(--mono);font-size:64px;font-weight:600;letter-spacing:.02em;line-height:1}
+.timer .task{margin-top:8px;color:var(--muted)}
+.ring{width:220px;height:220px;margin:0 auto;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.float{position:absolute;left:16px;right:16px;bottom:calc(72px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;z-index:7;box-shadow:var(--shadow)}
+.float .tm{font-family:var(--mono);font-size:20px;font-weight:600}
+.float .t{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.float button{color:var(--bg);font-size:14px;padding:4px 8px;border:1px solid rgba(255,255,255,.3);border-radius:8px}
+/* week plan */
+.wp{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.wpd{border-top:1px solid var(--line);padding:10px 12px}
+.wpd:first-child{border-top:0}
+.wpd .h{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:4px}
+.wpd .h .dn{font-weight:600}
+.wpd .h .dd{font-family:var(--mono);color:var(--muted);font-size:12px}
+.wpd.today .h .dn{color:var(--accent)}
+.wpi{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:14px}
+.wpi .chk{width:20px;height:20px;font-size:11px}
+.wpi .tx{flex:1;min-width:0;word-break:break-word}
+.wpi.done .tx{text-decoration:line-through;color:var(--muted)}
+.wpi .mini{font-size:12px;color:var(--accent);padding:2px 6px;border:1px solid var(--line);border-radius:6px;white-space:nowrap}
+.addln{display:flex;gap:6px;margin-top:4px}
+.addln input{flex:1;padding:7px 10px;border:1px dashed var(--line);border-radius:8px;background:none;font-size:14px}
+.path{position:relative;padding-left:18px}
+.path:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.pnode{position:relative;margin-bottom:12px}
+.pnode:before{content:"";position:absolute;left:-17px;top:7px;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.pnode .lv{font-size:11px;color:var(--muted);letter-spacing:.06em;font-weight:600}
+.pnode .bx{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:3px;font-size:14px;white-space:pre-line}
+.rule{padding:10px 12px;border-radius:10px;background:var(--warn-soft);border:1px solid transparent;font-size:13px;margin-top:8px}
+.rule b{display:block}
+.rule .ev{color:var(--muted);font-size:12px;margin-top:2px}
+.ob{position:fixed;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+.ob h1{font-family:var(--serif);font-size:28px}
+.ob p{color:var(--muted);max-width:340px}
+.ob .acts{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;margin-top:20px}
+</style>
+<div id="app">
+  <div class="hdr" id="hdr"></div>
+  <div class="main" id="main"></div>
+  <div id="float"></div>
+  <div id="fab"></div>
+  <nav class="tabbar" id="tabbar"></nav>
+</div>
+<div id="layer"></div>
+<script>
+/* ============ 常量 ============ */
+const DIMS=['学习·成长','体验·突破','休闲·放松','家庭·生活','工作·事业','人际·社群','财务·理财','健康·身体'];
+const GRID_ORDER=[0,1,2,3,-1,4,5,6,7]; // -1 = 核心词
+const WD=['一','二','三','四','五','六','日'];
+const DEFAULT_CATS=[
+ {c1:'中心工作时间',c2:'中心工作',c3:['知识营','拓荒营','时间营','写作','出书','生娃']},
+ {c1:'中心工作时间',c2:'附加工作',c3:['工作计划','工作沟通','助教培训','道格沙龙','社群互动','回复公众号','运营知识星球']},
+ {c1:'中心工作时间',c2:'可能自我',c3:['占星','直播','财务管理','萃取师','移民']},
+ {c1:'第二类时间',c2:'信息加工',c3:['论文','图书','杂志','视频','情报分析']},
+ {c1:'第二类时间',c2:'休息',c3:['发呆','购物','旅行']},
+ {c1:'第二类时间',c2:'娱乐',c3:['上网','音乐会','电影话剧','Switch']},
+ {c1:'第二类时间',c2:'交通',c3:['交通']},
+ {c1:'第二类时间',c2:'健康',c3:['运动','医院']},
+ {c1:'第二类时间',c2:'社交',c3:['朋友聊天','同事聊天','家人聊天','发朋友圈']},
+ {c1:'第二类时间',c2:'杂事',c3:['杂事']},
+ {c1:'事务性时间',c2:'睡觉',c3:['睡觉']},
+ {c1:'事务性时间',c2:'吃饭',c3:['买菜','吃饭','做饭','洗碗']},
+ {c1:'事务性时间',c2:'家务',c3:['洗漱','打扫房间']},
+ {c1:'事务性时间',c2:'陪夫人',c3:['陪夫人']},
+ {c1:'事务性时间',c2:'时间统计',c3:['时间统计']},
+ {c1:'事务性时间',c2:'日记',c3:['日记']}
+];
+const DEFAULT_DICT=[
+ {c3:'吃饭',keys:['午饭','做饭']},
+ {c3:'洗漱',keys:['洗脸','洗澡']},
+ {c3:'Switch',keys:['塞尔达','马车8']},
+ {c3:'上网',keys:['微信','B站']}
+];
+const C1COLORS=['var(--c1a)','var(--c1b)','var(--c1c)','var(--c1d)','var(--c1e)'];
+const STORE_KEY='tm_ledger_v1';
+
+/* ============ 状态 ============ */
+let S=null;
+function blankState(){return{
+  v:1,onboarded:false,
+  settings:{pomoOptions:[20,30],pomoDefault:20,breakMin:5,rollover:true,journalRemind:'21:00',weekendMerge:true,dnd:true,notified:{}},
+  grids:{},weekPlans:{},todos:[],habits:[],projects:[],tasks:[],sessions:[],records:[],
+  cats:JSON.parse(JSON.stringify(DEFAULT_CATS)),dict:JSON.parse(JSON.stringify(DEFAULT_DICT)),
+  reviews:{},journals:{},diaries:{},timer:null,interrupts:[]
+};}
+function load(){
+  try{const raw=localStorage.getItem(STORE_KEY);if(raw){S=Object.assign(blankState(),JSON.parse(raw));S.settings=Object.assign(blankState().settings,S.settings||{});return;}}catch(e){console.warn('load fail',e)}
+  S=blankState();
+}
+let saveT=null;
+function save(now){
+  clearTimeout(saveT);
+  const doSave=()=>{try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){toast('保存失败：'+(e&&e.message||'存储不可用'),true)}};
+  if(now)doSave();else saveT=setTimeout(doSave,150);
+}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ============ 日期工具（本地时区） ============ */
+const pad=n=>String(n).padStart(2,'0');
+function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function pdate(s){const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+const today=()=>dstr(new Date());
+function dadd(s,n){const d=pdate(s);d.setDate(d.getDate()+n);return dstr(d);}
+function wday(s){const w=pdate(s).getDay();return w===0?7:w;} // 1..7 周一=1
+function weekKey(s){ // ISO 周
+  const d=pdate(s);const t=new Date(d);t.setDate(d.getDate()+4-wday(s));const y=t.getFullYear();const jan1=new Date(y,0,1);
+  const wk=Math.ceil(((t-jan1)/86400000+1)/7);return y+'-W'+pad(wk);
+}
+function weekMonday(s){return dadd(s,1-wday(s));}
+function weekDates(mon){return [0,1,2,3,4,5,6].map(i=>dadd(mon,i));}
+function fmtD(s){const d=pdate(s);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
+function fmtDW(s){return fmtD(s)+' 周'+WD[wday(s)-1];}
+function ymKey(s){return s.slice(0,7);}
+function monthAdd(ym,n){let [y,m]=ym.split('-').map(Number);m+=n;while(m>12){m-=12;y++}while(m<1){m+=12;y--}return y+'-'+pad(m);}
+function nowHHMM(){const d=new Date();return d.getHours()*100+d.getMinutes();}
+function nowTime(){const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes());}
+
+/* ============ 时间值工具（对齐原表：HHMM 整数，2400=当日结束） ============ */
+function parseT(v){ // 返回 {ok, val}
+  if(v==null)return{ok:false};let s=String(v).trim().replace(/[:：]/g,'');if(!/^\d{1,4}$/.test(s))return{ok:false};
+  const n=parseInt(s,10);if(n===2400)return{ok:true,val:2400};const h=Math.floor(n/100),m=n%100;if(h>23||m>59)return{ok:false};return{ok:true,val:n};
+}
+function fmtT(n){if(n==null||n==='')return'';if(n===2400)return'24:00';return pad(Math.floor(n/100))+':'+pad(n%100);}
+function tmin(n){return n===2400?1440:Math.floor(n/100)*60+n%100;}
+function durMin(start,end){const a=tmin(start),b=tmin(end);return ((b-a)%1440+1440)%1440;} // MOD(end-start,1)
+function fmtHM(min){min=Math.round(min||0);const h=Math.floor(min/60),m=min%60;return h+'时'+pad(m)+'分';}
+function fmtHMs(min){min=Math.round(min||0);const h=Math.floor(min/60),m=min%60;return h?h+'h'+(m?pad(m):''):m+'m';}
+
+/* ============ UI 基础 ============ */
+let toastT=null;
+function toast(msg,err){const old=document.querySelector('.toast');if(old)old.remove();const el=document.createElement('div');el.className='toast'+(err?' err':'');el.textContent=msg;el.setAttribute('role','status');document.body.appendChild(el);clearTimeout(toastT);toastT=setTimeout(()=>el.remove(),2200);}
+function sheet(html,mount){
+  const layer=document.getElementById('layer');
+  const ov=document.createElement('div');ov.className='overlay';ov.innerHTML='<div class="sheet" role="dialog"><div class="grab"></div>'+html+'</div>';
+  ov.addEventListener('click',e=>{if(e.target===ov)closeSheet();});layer.appendChild(ov);
+  const el=ov.querySelector('.sheet');if(mount)mount(el);const first=el.querySelector('input,textarea,select');if(first&&first.dataset.nofocus==null)setTimeout(()=>first.focus(),60);
+  return el;
+}
+function closeSheet(){const l=document.getElementById('layer');if(l.lastChild)l.lastChild.remove();}
+function confirmS(msg,onYes,label){sheet(`<h2>确认</h2><p class="mt8">${esc(msg)}</p><div class="acts"><button class="btn sec2" data-a="no">取消</button><button class="btn danger" data-a="yes">${esc(label||'确定')}</button></div>`,el=>{el.querySelector('[data-a=no]').onclick=closeSheet;el.querySelector('[data-a=yes]').onclick=()=>{closeSheet();onYes();};});}
+function $(sel,root){return (root||document).querySelector(sel);}
+function $$(sel,root){return Array.from((root||document).querySelectorAll(sel));}
+function chkHtml(on){return `<span class="chk${on?' on':''}" aria-hidden="true">${on?'✓':''}</span>`;}
+function dimChips(cur,name){return `<div class="chips" data-chips="${name}"><span class="chip btn2${!cur?' on':''}" data-v="">无维度</span>${DIMS.map(d=>`<span class="chip btn2${cur===d?' on':''}" data-v="${esc(d)}">${esc(d)}</span>`).join('')}</div>`;}
+function bindChips(el,name,cb){const box=$(`[data-chips="${name}"]`,el);if(!box)return;box.addEventListener('click',e=>{const c=e.target.closest('.chip');if(!c)return;$$('.chip',box).forEach(x=>x.classList.toggle('on',x===c));cb(c.dataset.v);});}
+function chipVal(el,name){const c=$(`[data-chips="${name}"] .chip.on`,el);return c?c.dataset.v:'';}
+
+/* ============ 路由 ============ */
+const ROUTE={tab:'year',stack:[]}; // stack: [{page,params}]
+function go(page,params){ROUTE.stack.push({page,params:params||{}});render();}
+function back(){ROUTE.stack.pop();render();}
+function setTab(t){ROUTE.tab=t;ROUTE.stack=[];render();try{localStorage.setItem(STORE_KEY+'_tab',t)}catch(e){}}
+function current(){return ROUTE.stack.length?ROUTE.stack[ROUTE.stack.length-1]:{page:ROUTE.tab,params:{}};}
+function header(title,sub,right){
+  const isSub=ROUTE.stack.length>0;
+  $('#hdr').innerHTML=(isSub?'<button class="iconbtn ghost" id="backbtn" aria-label="返回">‹</button>':'')+`<h1>${esc(title)}${sub?`<span class="sub">${esc(sub)}</span>`:''}</h1>`+(right||'');
+  if(isSub)$('#backbtn').onclick=back;
+}
+function render(){
+  const cur=current();const fn=PAGES[cur.page];$('#fab').innerHTML='';
+  const main=$('#main');main.scrollTop=0;
+  if(fn)fn(main,cur.params);else main.innerHTML='<div class="empty">页面不存在</div>';
+  renderTabs();renderFloat();
+}
+function renderTabs(){
+  const n=todosFor(today()).filter(t=>!t.done).length;
+  const tabs=[['year','年目标','◫'],['month','月目标','▦'],['day','日清单','☑'],['me','我的','☰']];
+  $('#tabbar').innerHTML=tabs.map(([k,l,ic])=>`<button class="tab${ROUTE.tab===k?' on':''}" data-t="${k}" aria-label="${l}"><span class="ic">${ic}</span><span>${l}</span>${k==='day'&&n?`<span class="badge" id="daybadge">${n}</span>`:''}</button>`).join('');
+  $$('#tabbar .tab').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+}
+</script>
+<script>
+/* ============ 数据访问 ============ */
+function grid(key){if(!S.grids[key])S.grids[key]={core:'',goals:{}};return S.grids[key];}
+function weekPlan(key){if(!S.weekPlans[key]){S.weekPlans[key]={days:{}};}const w=S.weekPlans[key];for(let i=1;i<=7;i++)if(!w.days[i])w.days[i]=[];return w;}
+function todosFor(date){return S.todos.filter(t=>t.date===date).sort((a,b)=>(a.order||0)-(b.order||0));}
+function habitsFor(date){const w=wday(date);return S.habits.filter(h=>!h.archived&&(h.days||[]).includes(w)&&(!h.since||h.since<=date));}
+function findC12(c3){for(const c of S.cats){if(c.c3.includes(c3))return{c1:c.c1,c2:c.c2};}return null;}
+function rollover(){
+  if(!S.settings.rollover)return;const t=today();let n=0;
+  S.todos.forEach(x=>{if(!x.done&&x.date<t){x.origDate=x.origDate||x.date;x.date=t;x.status='rolled';n++;}});
+  if(n){save();}
+}
+function toggleTodo(id){const t=S.todos.find(x=>x.id===id);if(!t)return;t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done)t.status='done';else if(t.origDate)t.status='rolled';else t.status='open';
+  if(t.taskId){const k=S.tasks.find(x=>x.id===t.taskId);if(k)k.done=t.done;}
+  if(t.weekItemId){for(const wk of Object.values(S.weekPlans))for(const d of Object.values(wk.days)){const it=d.find(i=>i.id===t.weekItemId);if(it){const linked=S.todos.filter(x=>x.weekItemId===it.id);it.done=linked.length>0&&linked.every(x=>x.done);}}}
+  save();}
+
+/* ============ 页面：年目标 / 月目标 九宫格 ============ */
+let yearSel=new Date().getFullYear();
+let monthSel=ymKey(today());
+let monthMode='grid';
+function gridHtml(key,refKey){
+  const g=grid(key);const ref=refKey?grid(refKey):null;
+  return `<div class="grid9" role="grid">${GRID_ORDER.map(i=>{
+    if(i===-1)return `<button class="cell core" data-cell="core" aria-label="核心词"><span class="lb">核心词</span><span class="tx${g.core?'':' ph'}">${esc(g.core||'点击填写')}</span></button>`;
+    const v=g.goals[i]||'';const has=!!v.trim();
+    return `<button class="cell${has?' filled':''}" data-cell="${i}" aria-label="${DIMS[i]}${has?'（已填写）':'（未填写）'}"><span class="lb">${DIMS[i]}</span>${has?'<span class="dot" title="已填写"></span>':''}<span class="tx${has?'':' ph'}">${has?esc(v):(ref&&ref.goals[i]?'年：'+esc(ref.goals[i]):'未填写')}</span></button>`;
+  }).join('')}</div>`;
+}
+function bindGrid(root,key,refKey,after){
+  $$('[data-cell]',root).forEach(b=>b.onclick=()=>{
+    const g=grid(key);const c=b.dataset.cell;
+    if(c==='core'){
+      sheet(`<h2>核心词</h2><p class="hint">用一个词表达这一阶段的人生主题（如：创造 / 沉淀 / 突破）</p><div class="f"><input class="in" id="coreIn" maxlength="12" value="${esc(g.core)}" placeholder="例如：创造"></div><div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">保存</button></div>`,el=>{
+        $('#cc',el).onclick=closeSheet;$('#ok',el).onclick=()=>{g.core=$('#coreIn',el).value.trim();save();closeSheet();after();toast('已保存');};
+      });
+    }else{
+      const i=+c;const ref=refKey?grid(refKey).goals[i]:'';
+      sheet(`<h2>${esc(DIMS[i])}</h2>${ref?`<div class="card mt8 small" style="white-space:pre-line"><span class="muted">参考年度目标：</span>${esc(ref)}</div>`:''}<div class="f"><label>目标（支持多行）</label><textarea class="in" id="goalIn" placeholder="写下这个维度的目标…">${esc(g.goals[i]||'')}</textarea></div><div class="row mt12"><button class="lnk" id="toProj">→ 查看/新建该维度项目</button><span class="sp"></span><button class="lnk" id="toPath">目标路径</button></div><div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">保存</button></div>`,el=>{
+        const ta=$('#goalIn',el);const commit=()=>{g.goals[i]=ta.value;save();};ta.addEventListener('blur',commit);
+        $('#cc',el).onclick=()=>{commit();closeSheet();after();};$('#ok',el).onclick=()=>{commit();closeSheet();after();toast('已保存');};
+        $('#toProj',el).onclick=()=>{commit();closeSheet();go('projects',{dim:DIMS[i]});};$('#toPath',el).onclick=()=>{commit();closeSheet();go('path',{dim:DIMS[i]});};
+      });
+    }
+  });
+}
+const PAGES={};
+PAGES.year=function(main){
+  header('年目标','九宫格');
+  const key='Y'+yearSel;const g=grid(key);const filled=DIMS.filter((_,i)=>(g.goals[i]||'').trim()).length;
+  main.innerHTML=`<div class="switch"><button class="iconbtn" id="py" aria-label="上一年">‹</button><span class="val num">${yearSel} 年</span><button class="iconbtn" id="ny" aria-label="下一年">›</button></div>
+  ${gridHtml(key)}
+  <div class="row mt12 small muted"><span>已填写 <b class="num">${filled}</b>/8 个维度</span><span class="sp"></span><button class="lnk" id="toPath">目标路径 ›</button></div>
+  <div class="sec"><div class="sec-h"><h2>方法提示</h2></div><div class="card small muted">八个维度围绕中心「核心词」展开。年目标定方向，月目标承接，周计划安排，日清单执行 —— 每格写 1～3 条即可，宁少勿多。</div></div>`;
+  $('#py').onclick=()=>{yearSel--;render();};$('#ny').onclick=()=>{yearSel++;render();};$('#toPath').onclick=()=>go('path',{});
+  bindGrid(main,key,null,render);
+};
+PAGES.month=function(main){
+  const [y,m]=monthSel.split('-').map(Number);
+  header('月目标',y+' 年 '+m+' 月',`<div class="seg" id="mseg"><button data-m="grid" class="${monthMode==='grid'?'on':''}">九宫格</button><button data-m="week" class="${monthMode==='week'?'on':''}">周计划</button></div>`);
+  $$('#mseg button').forEach(b=>b.onclick=()=>{monthMode=b.dataset.m;render();});
+  if(monthMode==='week'){return weekPlanPage(main);}
+  const key='M'+monthSel;const refKey='Y'+y;
+  main.innerHTML=`<div class="switch"><button class="iconbtn" id="pm" aria-label="上月">‹</button><span class="val num">${y} 年 ${m} 月</span><button class="iconbtn" id="nm" aria-label="下月">›</button></div>
+  ${gridHtml(key,refKey)}
+  <div class="row mt12 small muted"><span>灰字为对应维度的年度目标</span><span class="sp"></span><button class="lnk" id="toWeek">从月目标生成本周计划 ›</button></div>`;
+  $('#pm').onclick=()=>{monthSel=monthAdd(monthSel,-1);render();};$('#nm').onclick=()=>{monthSel=monthAdd(monthSel,1);render();};
+  $('#toWeek').onclick=()=>{monthMode='week';render();setTimeout(genWeekFromMonth,50);};
+  bindGrid(main,key,refKey,render);
+};
+
+/* ============ 周计划 ============ */
+let weekSel=weekMonday(today());
+function weekLabel(mon){const k=weekKey(mon);return k.slice(5)+' · '+fmtD(mon)+'–'+fmtD(dadd(mon,6));}
+function weekPlanPage(main,opts){
+  opts=opts||{};const mon=weekSel;const key=weekKey(mon);const wp=weekPlan(key);const dates=weekDates(mon);const t=today();
+  const merge=S.settings.weekendMerge;
+  const dayBlock=(i)=>{const d=dates[i-1];const items=wp.days[i];
+    return `<div class="wpd${d===t?' today':''}" data-day="${i}"><div class="h"><span class="dn">周${WD[i-1]}</span><span class="dd">${fmtD(d)}</span><span class="sp"></span>${items.length?`<span class="hint num">${items.filter(x=>x.done).length}/${items.length}</span>`:''}</div>
+    ${items.map(it=>`<div class="wpi${it.done?' done':''}" data-id="${it.id}"><button class="chk${it.done?' on':''}" data-a="tg" aria-label="完成">${it.done?'✓':''}</button><span class="tx" data-a="ed">${esc(it.text)}${it.dim?` <span class="chip acc">${esc(it.dim)}</span>`:''}</span>${it.todoId?'<span class="chip ok">已下推</span>':`<button class="mini" data-a="push" title="下推为当天待办">↓待办</button>`}</div>`).join('')}
+    <div class="addln"><input placeholder="添加计划事项…" data-add="${i}" aria-label="周${WD[i-1]}添加计划"></div></div>`;};
+  main.innerHTML=`<div class="switch"><button class="iconbtn" id="pw" aria-label="上一周">‹</button><span class="val num" style="font-size:15px">${weekLabel(mon)}</span><button class="iconbtn" id="nw" aria-label="下一周">›</button></div>
+  <div class="row mt8" style="margin-bottom:10px"><button class="btn sm sec2" id="thisw">回到本周</button><button class="btn sm sec2" id="gen">从月目标生成</button><span class="sp"></span><button class="btn sm sec2" id="mg">${merge?'周末合并':'周末独立'}</button></div>
+  <div class="wp">${[1,2,3,4,5].map(dayBlock).join('')}${merge?`<div class="wpd" style="background:var(--surface2)"><div class="h"><span class="dn">周末</span></div></div>`:''}${dayBlock(6)}${dayBlock(7)}</div>
+  <div class="row mt12"><button class="lnk" id="toReview">本周复盘 ›</button><span class="sp"></span><button class="lnk" id="toDiary">观察日记 ›</button></div>`;
+  $('#pw').onclick=()=>{weekSel=dadd(weekSel,-7);render();};$('#nw').onclick=()=>{weekSel=dadd(weekSel,7);render();};$('#thisw').onclick=()=>{weekSel=weekMonday(today());render();};
+  $('#mg').onclick=()=>{S.settings.weekendMerge=!merge;save();render();};$('#gen').onclick=genWeekFromMonth;
+  $('#toReview').onclick=()=>go('review',{week:key});$('#toDiary').onclick=()=>go('diary',{week:key});
+  $$('[data-add]',main).forEach(inp=>inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&inp.value.trim()){wp.days[+inp.dataset.add].push({id:uid(),text:inp.value.trim(),done:false,dim:''});save();render();}}));
+  $$('.wpi',main).forEach(row=>{const day=+row.closest('.wpd').dataset.day;const it=wp.days[day].find(x=>x.id===row.dataset.id);
+    $('[data-a=tg]',row).onclick=()=>{it.done=!it.done;save();render();};
+    $('[data-a=ed]',row).onclick=()=>editWeekItem(wp,day,it);
+    const p=$('[data-a=push]',row);if(p)p.onclick=()=>{pushToDay(it,dates[day-1]);};
+  });
+}
+function pushToDay(it,date){const td={id:uid(),date,text:it.text,done:false,dim:it.dim||'',order:S.todos.length,weekItemId:it.id,status:'open',createdAt:Date.now()};S.todos.push(td);it.todoId=td.id;save();toast('已下推到 '+fmtD(date)+' 的待办');render();}
+function editWeekItem(wp,day,it){
+  sheet(`<h2>编辑计划事项</h2><div class="f"><label>内容</label><input class="in" id="wt" value="${esc(it.text)}"></div><div class="f"><label>所属维度</label>${dimChips(it.dim,'d')}</div><div class="f"><label>移到</label><select class="in" id="wd">${[1,2,3,4,5,6,7].map(i=>`<option value="${i}"${i===day?' selected':''}>周${WD[i-1]}</option>`).join('')}</select></div>
+  <div class="acts"><button class="btn danger" id="del">删除</button><button class="btn" id="ok">保存</button></div>`,el=>{
+    let dim=it.dim;bindChips(el,'d',v=>dim=v);
+    $('#del',el).onclick=()=>{wp.days[day]=wp.days[day].filter(x=>x!==it);save();closeSheet();render();};
+    $('#ok',el).onclick=()=>{it.text=$('#wt',el).value.trim()||it.text;it.dim=dim;const nd=+$('#wd',el).value;if(nd!==day){wp.days[day]=wp.days[day].filter(x=>x!==it);wp.days[nd].push(it);}save();closeSheet();render();};
+  });
+}
+function genWeekFromMonth(){
+  const mon=weekSel;const g=grid('M'+ymKey(mon));const key=weekKey(mon);const wp=weekPlan(key);
+  const lines=[];DIMS.forEach((d,i)=>{(g.goals[i]||'').split(/\n/).map(s=>s.trim()).filter(Boolean).forEach(s=>lines.push({dim:d,text:s}));});
+  if(!lines.length){toast('本月九宫格还没有目标，请先在「月目标」填写',true);return;}
+  sheet(`<h2>从月目标生成本周计划</h2><p class="hint">勾选要放进本周的目标，可选择放到哪一天。</p><div class="list mt8">${lines.map((l,i)=>`<label class="item"><input type="checkbox" checked data-i="${i}"><span class="t"><span class="n">${esc(l.text)}</span><span class="m">${esc(l.dim)}</span></span></label>`).join('')}</div>
+  <div class="f"><label>放到</label><select class="in" id="gd"><option value="1">周一（本周开头）</option>${[2,3,4,5,6,7].map(i=>`<option value="${i}">周${WD[i-1]}</option>`).join('')}</select></div><div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">生成</button></div>`,el=>{
+    $('#cc',el).onclick=closeSheet;$('#ok',el).onclick=()=>{const d=+$('#gd',el).value;let n=0;$$('input[type=checkbox]',el).forEach(c=>{if(c.checked){const l=lines[+c.dataset.i];if(!wp.days[d].some(x=>x.text===l.text)){wp.days[d].push({id:uid(),text:l.text,done:false,dim:l.dim,fromMonth:true});n++;}}});save();closeSheet();toast('已生成 '+n+' 条计划');render();};
+  });
+}
+
+/* ============ 日清单 ============ */
+let daySel=today();
+PAGES.day=function(main){
+  const t=today();const mon=weekMonday(daySel);const dates=weekDates(mon);
+  header('日清单',daySel===t?'今天':fmtDW(daySel),`<button class="iconbtn ghost" id="toWk" aria-label="周计划" title="周计划">▤</button>`);
+  $('#toWk').onclick=()=>{weekSel=weekMonday(daySel);go('weekplan',{});};
+  const todos=todosFor(daySel);const habits=habitsFor(daySel);const open=todos.filter(x=>!x.done);
+  main.innerHTML=`<div class="wstrip">${dates.map((d,i)=>{const n=todosFor(d).filter(x=>!x.done).length;return `<button class="wd${d===t?' today':''}${d===daySel?' sel':''}" data-d="${d}" aria-label="${fmtDW(d)}"><span class="w">${WD[i]}</span><span class="n">${pdate(d).getDate()}</span>${n?'<span class="pip"></span>':''}</button>`;}).join('')}</div>
+  <div class="row small muted" style="margin:-4px 0 8px"><button class="lnk" id="pwk">‹ 上周</button><span class="sp"></span><button class="lnk" id="tod">回到今天</button><span class="sp"></span><button class="lnk" id="nwk">下周 ›</button></div>
+  <div class="sec"><div class="sec-h"><h2>待办</h2><span class="cnt">${todos.length-open.length}/${todos.length}</span><span class="sp"></span><button class="lnk" id="fromTask">从任务加入</button></div>
+  ${todos.length?`<div class="list" id="todoList">${todos.map(x=>`<div class="item${x.done?' done':''}" data-id="${x.id}"><button class="chk${x.done?' on':''}" data-a="tg" aria-label="完成">${x.done?'✓':''}</button><div class="t" data-a="ed"><div class="n">${esc(x.text)}</div><div class="m">${x.dim?`<span class="chip acc">${esc(x.dim)}</span>`:''}${x.remind?`<span class="chip">⏰ ${esc(x.remind)}</span>`:''}${x.origDate&&x.origDate!==x.date?`<span class="chip wn">顺延自 ${fmtD(x.origDate)}</span>`:''}${x.taskId?'<span class="chip">任务</span>':''}${x.weekItemId?'<span class="chip">周计划</span>':''}</div></div>${x.done?'':`<button class="iconbtn ghost" data-a="pomo" aria-label="开始番茄" title="番茄专注">▶</button>`}<div class="row" style="flex-direction:column;gap:0"><button class="iconbtn ghost" data-a="up" aria-label="上移" style="height:20px;font-size:11px">▲</button><button class="iconbtn ghost" data-a="dn" aria-label="下移" style="height:20px;font-size:11px">▼</button></div></div>`).join('')}</div>`:`<div class="empty">暂无${daySel===t?'今日':'当日'}任务，请进行任务规划<br><button class="btn sm" id="addFirst">+ 添加待办</button></div>`}</div>
+  <div class="sec"><div class="sec-h"><h2>习惯</h2><span class="cnt">${habits.filter(h=>h.done&&h.done[daySel]).length}/${habits.length}</span><span class="sp"></span><button class="lnk" id="addHabit">+ 新习惯</button></div>
+  ${habits.length?`<div class="list" id="habitList">${habits.map(h=>{const on=!!(h.done&&h.done[daySel]);return `<div class="item${on?' done':''}" data-id="${h.id}"><button class="chk${on?' on':''}" data-a="tg" aria-label="打卡">${on?'✓':''}</button><div class="t" data-a="ed"><div class="n">${esc(h.name)}</div><div class="m"><span class="chip">${h.days.length===7?'每天':'周'+h.days.map(d=>WD[d-1]).join('')}</span><span class="chip">连续 ${streak(h,daySel)} 天</span></div></div></div>`;}).join('')}</div>`:`<div class="empty">暂无习惯任务<br><button class="btn sm sec2" id="addHabit2">+ 建立第一个习惯</button></div>`}</div>
+  <div class="sec"><div class="row small muted"><button class="lnk" id="toLog">记录时间 ›</button><span class="sp"></span><button class="lnk" id="toJ">写今日日志 ›</button></div></div>`;
+  $('#fab').innerHTML='<button class="fab" id="fabBtn" aria-label="添加待办">+</button>';$('#fabBtn').onclick=()=>editTodo(null);
+  $$('.wd',main).forEach(b=>b.onclick=()=>{daySel=b.dataset.d;render();});
+  $('#pwk').onclick=()=>{daySel=dadd(daySel,-7);render();};$('#nwk').onclick=()=>{daySel=dadd(daySel,7);render();};$('#tod').onclick=()=>{daySel=t;render();};
+  $('#fromTask').onclick=()=>go('tasksPick',{date:daySel});
+  const af=$('#addFirst');if(af)af.onclick=()=>editTodo(null);
+  const ah=$('#addHabit')||$('#addHabit2');if(ah)ah.onclick=()=>editHabit(null);const ah2=$('#addHabit2');if(ah2)ah2.onclick=()=>editHabit(null);
+  $('#toLog').onclick=()=>go('timelog',{});$('#toJ').onclick=()=>go('journal',{date:daySel});
+  $$('#todoList .item',main).forEach(row=>{const id=row.dataset.id;const x=S.todos.find(y=>y.id===id);
+    $('[data-a=tg]',row).onclick=()=>{toggleTodo(id);render();};$('[data-a=ed]',row).onclick=()=>editTodo(x);
+    const p=$('[data-a=pomo]',row);if(p)p.onclick=()=>startPomoSheet(x);
+    $('[data-a=up]',row).onclick=()=>moveTodo(x,-1);$('[data-a=dn]',row).onclick=()=>moveTodo(x,1);
+  });
+  $$('#habitList .item',main).forEach(row=>{const h=S.habits.find(y=>y.id===row.dataset.id);
+    $('[data-a=tg]',row).onclick=()=>{h.done=h.done||{};if(h.done[daySel])delete h.done[daySel];else h.done[daySel]=true;save();render();};$('[data-a=ed]',row).onclick=()=>editHabit(h);});
+};
+function moveTodo(x,dir){const list=todosFor(x.date);list.forEach((t,i)=>t.order=i);const i=list.indexOf(x);const j=i+dir;if(j<0||j>=list.length)return;list[i].order=j;list[j].order=i;save();render();}
+function streak(h,date){let n=0,d=date;for(let i=0;i<400;i++){if(!h.days.includes(wday(d))){d=dadd(d,-1);continue;}if(h.done&&h.done[d]){n++;d=dadd(d,-1);}else break;}return n;}
+function editTodo(x){
+  const isNew=!x;x=x||{id:uid(),date:daySel,text:'',done:false,dim:'',remind:'',order:S.todos.length,status:'open',createdAt:Date.now()};
+  sheet(`<h2>${isNew?'新建待办':'编辑待办'}</h2><div class="f"><label>内容</label><input class="in" id="tt" value="${esc(x.text)}" placeholder="要做什么？"></div>
+  <div class="f"><label>日期</label><input class="in" type="date" id="td" value="${x.date}"></div>
+  <div class="f"><label>提醒时间（可选）</label><input class="in" type="time" id="tr" value="${esc(x.remind||'')}"></div>
+  <div class="f"><label>所属维度（用于分类统计）</label>${dimChips(x.dim,'d')}</div>
+  ${!isNew?`<div class="f"><label>上挂到</label><div class="row wrap"><button class="btn sm sec2" id="hangWeek">周计划</button>${x.weekItemId?'<span class="chip ok">已关联周计划</span>':''}</div></div>`:''}
+  <div class="acts">${isNew?'<button class="btn sec2" id="cc">取消</button>':'<button class="btn danger" id="del">删除</button>'}<button class="btn" id="ok">保存</button></div>`,el=>{
+    let dim=x.dim;bindChips(el,'d',v=>dim=v);
+    const cc=$('#cc',el);if(cc)cc.onclick=closeSheet;const del=$('#del',el);if(del)del.onclick=()=>{S.todos=S.todos.filter(t=>t.id!==x.id);save();closeSheet();render();};
+    const hw=$('#hangWeek',el);if(hw)hw.onclick=()=>{const key=weekKey(x.date);const wp=weekPlan(key);const d=wday(x.date);const it={id:uid(),text:x.text,done:x.done,dim:dim,todoId:x.id};wp.days[d].push(it);x.weekItemId=it.id;save();closeSheet();toast('已上挂到 '+key+' 周计划');render();};
+    $('#ok',el).onclick=()=>{const text=$('#tt',el).value.trim();if(!text){toast('请填写内容',true);return;}x.text=text;x.date=$('#td',el).value||x.date;x.remind=$('#tr',el).value;x.dim=dim;if(isNew)S.todos.push(x);save();closeSheet();toast(isNew?'已添加':'已保存');render();};
+  });
+}
+function editHabit(h){
+  const isNew=!h;h=h||{id:uid(),name:'',days:[1,2,3,4,5,6,7],done:{},since:today()};
+  sheet(`<h2>${isNew?'新建习惯':'编辑习惯'}</h2><div class="f"><label>名称</label><input class="in" id="hn" value="${esc(h.name)}" placeholder="如：晨读 20 分钟"></div>
+  <div class="f"><label>周期</label><div class="chips" id="hd">${[1,2,3,4,5,6,7].map(i=>`<span class="chip btn2${h.days.includes(i)?' on':''}" data-v="${i}">周${WD[i-1]}</span>`).join('')}</div></div>
+  <div class="acts">${isNew?'<button class="btn sec2" id="cc">取消</button>':'<button class="btn danger" id="del">删除</button>'}<button class="btn" id="ok">保存</button></div>`,el=>{
+    $$('#hd .chip',el).forEach(c=>c.onclick=()=>c.classList.toggle('on'));
+    const cc=$('#cc',el);if(cc)cc.onclick=closeSheet;const del=$('#del',el);if(del)del.onclick=()=>{S.habits=S.habits.filter(x=>x.id!==h.id);save();closeSheet();render();};
+    $('#ok',el).onclick=()=>{const name=$('#hn',el).value.trim();if(!name){toast('请填写名称',true);return;}const days=$$('#hd .chip.on',el).map(c=>+c.dataset.v);if(!days.length){toast('至少选择一天',true);return;}h.name=name;h.days=days;if(isNew)S.habits.push(h);save();closeSheet();render();};
+  });
+}
+PAGES.weekplan=function(main){header('周计划','');weekPlanPage(main);};
+
+/* ============ 目标路径 ============ */
+PAGES.path=function(main,p){
+  header('目标路径','年 → 月 → 周 → 日');
+  const dim=p.dim||DIMS[0];const t=today();const y='Y'+t.slice(0,4),m='M'+ymKey(t),wk=weekKey(t);const i=DIMS.indexOf(dim);
+  const wp=weekPlan(wk);const wItems=[];for(let d=1;d<=7;d++)wp.days[d].forEach(it=>{if(it.dim===dim)wItems.push(it);});
+  const todos=S.todos.filter(x=>x.dim===dim&&x.date>=weekMonday(t)&&x.date<=dadd(weekMonday(t),6));
+  const projs=S.projects.filter(x=>x.dim===dim&&!x.archived);
+  main.innerHTML=`<div class="chips" style="margin-bottom:14px">${DIMS.map(d=>`<span class="chip btn2${d===dim?' on':''}" data-v="${esc(d)}">${esc(d)}</span>`).join('')}</div>
+  <div class="path">
+  <div class="pnode"><div class="lv">年目标 · ${t.slice(0,4)}</div><div class="bx">${esc(grid(y).goals[i]||'')||'<span class="muted">未填写</span>'}</div></div>
+  <div class="pnode"><div class="lv">月目标 · ${+t.slice(5,7)} 月</div><div class="bx">${esc(grid(m).goals[i]||'')||'<span class="muted">未填写</span>'}</div></div>
+  <div class="pnode"><div class="lv">项目 · ${projs.length} 个</div><div class="bx">${projs.length?projs.map(pj=>`<div>${esc(pj.name)} <span class="muted num small">${projProgress(pj)}</span></div>`).join(''):'<span class="muted">暂无项目</span>'}</div></div>
+  <div class="pnode"><div class="lv">本周计划 · ${wk}</div><div class="bx">${wItems.length?wItems.map(it=>`<div>${it.done?'✓ ':'· '}${esc(it.text)}</div>`).join(''):'<span class="muted">本周没有标注此维度的计划</span>'}</div></div>
+  <div class="pnode"><div class="lv">本周待办 · ${todos.length} 条</div><div class="bx">${todos.length?todos.map(x=>`<div>${x.done?'✓ ':'· '}${esc(x.text)} <span class="muted small num">${fmtD(x.date)}</span></div>`).join(''):'<span class="muted">暂无</span>'}</div></div>
+  </div>
+  <div class="row mt8"><button class="btn sm sec2" id="toProj">项目与任务</button><button class="btn sm sec2" id="toAn">该维度时间投入</button></div>`;
+  $$('.chips .chip',main).forEach(c=>c.onclick=()=>{ROUTE.stack[ROUTE.stack.length-1].params={dim:c.dataset.v};render();});
+  $('#toProj').onclick=()=>go('projects',{dim});$('#toAn').onclick=()=>go('analysis',{});
+};
+</script>
+<script>
+/* ============ 项目与任务 ============ */
+function projProgress(p){const ts=S.tasks.filter(t=>t.projectId===p.id);if(!ts.length)return'0/0';return ts.filter(t=>t.done).length+'/'+ts.length;}
+PAGES.projects=function(main,p){
+  header('项目与任务','目标 → 项目 → 任务');
+  const dim=p.dim||'';const projs=S.projects.filter(x=>!x.archived&&(!dim||x.dim===dim));
+  main.innerHTML=`<div class="chips" style="margin-bottom:12px"><span class="chip btn2${!dim?' on':''}" data-v="">全部</span>${DIMS.map(d=>`<span class="chip btn2${d===dim?' on':''}" data-v="${esc(d)}">${esc(d)}</span>`).join('')}</div>
+  ${projs.length?projs.map(pj=>{const ts=S.tasks.filter(t=>t.projectId===pj.id);const done=ts.filter(t=>t.done).length;const pct=ts.length?Math.round(done/ts.length*100):0;
+    return `<div class="card" data-p="${pj.id}"><div class="row"><div class="sp" style="min-width:0"><div style="font-weight:600">${esc(pj.name)}</div><div class="small muted">${esc(pj.dim||'无维度')}${pj.goalRef?' · '+esc(pj.goalRef):''}</div></div><span class="num small">${done}/${ts.length}</span><button class="iconbtn ghost" data-a="edp" aria-label="编辑项目">✎</button></div>
+    <div class="bar mt8"><i style="width:${pct}%"></i></div>
+    <div class="mt8">${ts.map(t=>`<div class="wpi${t.done?' done':''}" data-t="${t.id}"><button class="chk${t.done?' on':''}" data-a="tg" aria-label="完成">${t.done?'✓':''}</button><span class="tx" data-a="edt">${esc(t.name)}${t.date?` <span class="muted small num">${fmtD(t.date)}</span>`:''}${t.est?` <span class="muted small num">${t.est}m</span>`:''}</span>${t.todoId?'<span class="chip ok">在日清单</span>':`<button class="mini" data-a="push">加入日清单</button>`}</div>`).join('')}</div>
+    <div class="addln"><input placeholder="添加任务…" data-addt="${pj.id}" aria-label="添加任务"></div></div>`;}).join(''):`<div class="empty">还没有项目。把一个月度目标拆成项目，再拆成可执行的任务。</div>`}
+  <div class="mt12"><button class="btn block" id="addP">+ 新建项目</button></div>`;
+  $$('.chips .chip',main).forEach(c=>c.onclick=()=>{ROUTE.stack[ROUTE.stack.length-1].params={dim:c.dataset.v};render();});
+  $('#addP').onclick=()=>editProject(null,dim);
+  $$('[data-addt]',main).forEach(inp=>inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&inp.value.trim()){S.tasks.push({id:uid(),projectId:inp.dataset.addt,name:inp.value.trim(),date:'',est:0,done:false});save();render();}}));
+  $$('.card[data-p]',main).forEach(card=>{const pj=S.projects.find(x=>x.id===card.dataset.p);$('[data-a=edp]',card).onclick=()=>editProject(pj);
+    $$('.wpi',card).forEach(row=>{const t=S.tasks.find(x=>x.id===row.dataset.t);
+      $('[data-a=tg]',row).onclick=()=>{t.done=!t.done;if(t.todoId){const td=S.todos.find(x=>x.id===t.todoId);if(td){td.done=t.done;td.status=t.done?'done':'open';}}save();render();};
+      $('[data-a=edt]',row).onclick=()=>editTask(t);const p=$('[data-a=push]',row);if(p)p.onclick=()=>pushTaskToDay(t,pj);});});
+};
+function pushTaskToDay(t,pj){
+  sheet(`<h2>加入日清单</h2><div class="f"><label>日期</label><input class="in" type="date" id="pd" value="${t.date||today()}"></div><div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">加入</button></div>`,el=>{
+    $('#cc',el).onclick=closeSheet;$('#ok',el).onclick=()=>{const d=$('#pd',el).value||today();const td={id:uid(),date:d,text:t.name,done:t.done,dim:pj.dim||'',order:S.todos.length,taskId:t.id,status:'open',createdAt:Date.now()};S.todos.push(td);t.todoId=td.id;t.date=d;save();closeSheet();toast('已加入 '+fmtD(d)+' 日清单');render();};});
+}
+function editProject(pj,dim){
+  const isNew=!pj;pj=pj||{id:uid(),name:'',dim:dim||'',goalRef:'',archived:false};
+  sheet(`<h2>${isNew?'新建项目':'编辑项目'}</h2><div class="f"><label>名称</label><input class="in" id="pn" value="${esc(pj.name)}" placeholder="如：完成第一版咨询服务手册"></div><div class="f"><label>所属维度</label>${dimChips(pj.dim,'d')}</div><div class="f"><label>对应目标（可选，如「2026 年」「2026-09 月」）</label><input class="in" id="pg" value="${esc(pj.goalRef||'')}" placeholder="${ymKey(today())} 月目标"></div>
+  <div class="acts">${isNew?'<button class="btn sec2" id="cc">取消</button>':'<button class="btn danger" id="del">归档</button>'}<button class="btn" id="ok">保存</button></div>`,el=>{
+    let d=pj.dim;bindChips(el,'d',v=>d=v);const cc=$('#cc',el);if(cc)cc.onclick=closeSheet;const del=$('#del',el);if(del)del.onclick=()=>{pj.archived=true;save();closeSheet();render();};
+    $('#ok',el).onclick=()=>{const n=$('#pn',el).value.trim();if(!n){toast('请填写名称',true);return;}pj.name=n;pj.dim=d;pj.goalRef=$('#pg',el).value.trim();if(isNew)S.projects.push(pj);save();closeSheet();render();};});
+}
+function editTask(t){
+  sheet(`<h2>编辑任务</h2><div class="f"><label>名称</label><input class="in" id="tn" value="${esc(t.name)}"></div><div class="f"><label>计划日期</label><input class="in" type="date" id="tdt" value="${t.date||''}"></div><div class="f"><label>预估时长（分钟）</label><input class="in mono" type="number" id="te" value="${t.est||''}" min="0"></div>
+  <div class="acts"><button class="btn danger" id="del">删除</button><button class="btn" id="ok">保存</button></div>`,el=>{
+    $('#del',el).onclick=()=>{S.tasks=S.tasks.filter(x=>x!==t);save();closeSheet();render();};
+    $('#ok',el).onclick=()=>{t.name=$('#tn',el).value.trim()||t.name;t.date=$('#tdt',el).value;t.est=+$('#te',el).value||0;if(t.todoId){const td=S.todos.find(x=>x.id===t.todoId);if(td)td.text=t.name;}save();closeSheet();render();};});
+}
+PAGES.tasksPick=function(main,p){
+  header('从任务加入日清单',fmtD(p.date));
+  const ts=S.tasks.filter(t=>!t.done&&!t.todoId);
+  main.innerHTML=ts.length?`<div class="list">${ts.map(t=>{const pj=S.projects.find(x=>x.id===t.projectId)||{};return `<div class="item" data-t="${t.id}"><div class="t"><div class="n">${esc(t.name)}</div><div class="m">${esc(pj.name||'')}${pj.dim?' · '+esc(pj.dim):''}</div></div><button class="btn sm soft" data-a="add">加入</button></div>`;}).join('')}</div>`:`<div class="empty">没有可加入的任务。<br><button class="btn sm sec2" id="toP">去项目里拆解任务</button></div>`;
+  const tp=$('#toP');if(tp)tp.onclick=()=>go('projects',{});
+  $$('[data-a=add]',main).forEach(b=>b.onclick=()=>{const t=S.tasks.find(x=>x.id===b.closest('.item').dataset.t);const pj=S.projects.find(x=>x.id===t.projectId)||{};const td={id:uid(),date:p.date,text:t.name,done:false,dim:pj.dim||'',order:S.todos.length,taskId:t.id,status:'open',createdAt:Date.now()};S.todos.push(td);t.todoId=td.id;t.date=p.date;save();toast('已加入');render();});
+};
+
+/* ============ 番茄专注 ============ */
+let tickT=null;
+function timerRemaining(){const T=S.timer;if(!T)return 0;if(T.running)return Math.max(0,Math.round((T.endAt-Date.now())/1000));return T.remainingSec;}
+function startPomoSheet(todo){
+  if(S.timer){toast('已有进行中的专注，请先完成或放弃',true);go('focus',{});return;}
+  const opts=S.settings.pomoOptions;let planned=S.settings.pomoDefault;
+  sheet(`<h2>开始番茄专注</h2><div class="card mt8">${todo?esc(todo.text):'<span class="muted">自由专注（不关联任务）</span>'}</div>
+  <div class="f"><label>时长</label><div class="chips" id="pd">${opts.map(m=>`<span class="chip btn2${m===planned?' on':''}" data-v="${m}">${m} 分钟</span>`).join('')}<span class="chip btn2" data-v="custom">自定义</span></div></div>
+  <div class="f" id="customF" hidden><label>自定义分钟数</label><input class="in mono" type="number" id="cm" min="1" max="180" value="25" data-nofocus></div>
+  <div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">开始</button></div>`,el=>{
+    $$('#pd .chip',el).forEach(c=>c.onclick=()=>{$$('#pd .chip',el).forEach(x=>x.classList.toggle('on',x===c));$('#customF',el).hidden=c.dataset.v!=='custom';planned=c.dataset.v==='custom'?+$('#cm',el).value||25:+c.dataset.v;});
+    $('#cm',el).oninput=()=>planned=+$('#cm',el).value||25;
+    $('#cc',el).onclick=closeSheet;$('#ok',el).onclick=()=>{closeSheet();startTimer(todo,planned);};
+  });
+}
+function startTimer(todo,planned){
+  S.timer={id:uid(),todoId:todo?todo.id:null,title:todo?todo.text:'自由专注',planned,phase:'focus',running:true,startedAt:Date.now(),endAt:Date.now()+planned*60000,remainingSec:planned*60,interrupts:[],pausedTotal:0};
+  save(true);go('focus',{});ensureTick();try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(l=>{window._wl=l;}).catch(()=>{});}catch(e){}
+}
+function ensureTick(){if(tickT)return;tickT=setInterval(()=>{const T=S.timer;if(!T){clearInterval(tickT);tickT=null;return;}const r=timerRemaining();
+  const big=$('#timerBig');if(big){big.textContent=fmtSec(r);const ring=$('#ringFg');if(ring){const total=(T.phase==='focus'?T.planned:S.settings.breakMin)*60;ring.setAttribute('stroke-dashoffset',String(628*(1-r/total)));}}
+  const fl=$('#floatTm');if(fl)fl.textContent=fmtSec(r);
+  if(T.running&&r<=0){if(T.phase==='focus')finishFocus('completed');else{S.timer=null;save(true);alertUser('休息结束，开始下一轮？');render();}}
+},1000);}
+function fmtSec(s){return pad(Math.floor(s/60))+':'+pad(s%60);}
+function alertUser(msg){
+  try{const AC=window.AudioContext||window.webkitAudioContext;if(AC){const ctx=new AC();[0,0.25,0.5].forEach(t=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.setValueAtTime(0.001,ctx.currentTime+t);g.gain.exponentialRampToValueAtTime(0.3,ctx.currentTime+t+0.02);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.2);o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+0.22);});}}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200]);}catch(e){}
+  try{if('Notification' in window&&Notification.permission==='granted')new Notification('时间统计本',{body:msg});}catch(e){}
+  toast(msg);
+}
+function finishFocus(status){
+  const T=S.timer;if(!T)return;const actual=Math.round((T.planned*60-timerRemaining())/60);
+  const sess={id:T.id,todoId:T.todoId,title:T.title,start:T.startedAt,end:Date.now(),planned:T.planned,actual:status==='completed'?T.planned:actual,status,interrupts:T.interrupts||[]};
+  S.sessions.push(sess);S.timer=null;save(true);
+  if(status==='completed'){alertUser('番茄完成：'+T.title+'（'+T.planned+' 分钟）');afterFocusSheet(sess);}else{toast('已放弃，本次记为未完成');render();}
+}
+function afterFocusSheet(sess){
+  render();
+  sheet(`<h2>专注完成 ✓</h2><div class="card mt8"><div>${esc(sess.title)}</div><div class="small muted num">${sess.planned} 分钟 · 打断 ${sess.interrupts.length} 次</div></div>
+  <div class="mt12 hint">把这段时间写进时间日志：结束时间取当前时刻（${nowTime()}），开始时间自动承接上一行（若中间有空档，先补记再写入）。</div>
+  <div class="acts"><button class="btn sec2" id="skip">稍后</button><button class="btn soft" id="brk">休息 ${S.settings.breakMin} 分钟</button><button class="btn" id="toLog">写入时间记录</button></div>`,el=>{
+    $('#skip',el).onclick=closeSheet;
+    $('#brk',el).onclick=()=>{closeSheet();S.timer={id:uid(),title:'短休息',planned:S.settings.breakMin,phase:'break',running:true,startedAt:Date.now(),endAt:Date.now()+S.settings.breakMin*60000,remainingSec:S.settings.breakMin*60,interrupts:[]};save(true);ensureTick();go('focus',{});};
+    $('#toLog',el).onclick=()=>{closeSheet();const end=nowHHMM();const r=addRecord({end:end===0?2400:end,note:sess.title,src:'focus'});go('timelog',{edit:r.id});};
+  });
+}
+PAGES.focus=function(main){
+  const T=S.timer;
+  header(T&&T.phase==='break'?'短休息':'番茄专注','');
+  if(!T){main.innerHTML=`<div class="empty">没有进行中的专注。<br><button class="btn sm mt8" id="st">开始自由专注</button></div><div class="sec"><div class="sec-h"><h2>最近专注</h2><span class="sp"></span><button class="lnk" id="hist">全部历史 ›</button></div>${sessionList(S.sessions.slice(-5).reverse())}</div>`;$('#st').onclick=()=>startPomoSheet(null);$('#hist').onclick=()=>go('focusHistory',{});return;}
+  const r=timerRemaining();const total=T.planned*60;
+  main.innerHTML=`<div class="timer"><div class="ring"><svg viewBox="0 0 220 220" width="220" height="220" aria-hidden="true"><circle cx="110" cy="110" r="100" fill="none" stroke="var(--line2)" stroke-width="10"/><circle id="ringFg" cx="110" cy="110" r="100" fill="none" stroke="${T.phase==='break'?'var(--ok)':'var(--accent)'}" stroke-width="10" stroke-linecap="round" stroke-dasharray="628" stroke-dashoffset="${628*(1-r/total)}"/></svg><div class="inner"><div class="big" id="timerBig">${fmtSec(r)}</div><div class="small muted num">/ ${T.planned}:00</div></div></div>
+  <div class="task">${esc(T.title)}</div>${T.phase==='focus'?`<div class="small muted mt8">打断 <span class="num">${T.interrupts.length}</span> 次 · ${S.settings.dnd?'勿扰已开启':'勿扰关闭'}</div>`:''}
+  <div class="row mt16" style="justify-content:center;gap:12px"><button class="btn sec2" id="pp">${T.running?'暂停':'继续'}</button><button class="btn danger" id="ab">${T.phase==='break'?'跳过休息':'放弃'}</button>${T.phase==='focus'?'<button class="btn" id="fin">提前完成</button>':''}</div>
+  ${T.phase==='focus'?`<div class="mt16 hint">切出应用会自动记一次「打断」。<br>手动记打断：</div><div class="chips mt8" style="justify-content:center" id="itags">${['消息','电话','走神','其他'].map(t=>`<span class="chip btn2" data-v="${t}">${t}</span>`).join('')}</div>`:''}
+  </div>`;
+  $('#pp').onclick=()=>{if(T.running){T.remainingSec=timerRemaining();T.running=false;}else{T.endAt=Date.now()+T.remainingSec*1000;T.running=true;}save(true);render();};
+  $('#ab').onclick=()=>{if(T.phase==='break'){S.timer=null;save(true);render();}else confirmS('放弃本次番茄？本次会记为未完成。',()=>finishFocus('abandoned'),'放弃');};
+  const fin=$('#fin');if(fin)fin.onclick=()=>finishFocus('completed');
+  $$('#itags .chip',main).forEach(c=>c.onclick=()=>{T.interrupts.push({t:Date.now(),tag:c.dataset.v});save();render();toast('已记录打断：'+c.dataset.v);});
+  ensureTick();
+};
+function sessionList(list){if(!list.length)return'<div class="empty">暂无专注记录</div>';return `<div class="list">${list.map(s=>{const d=new Date(s.start);return `<div class="item"><div class="t"><div class="n">${esc(s.title)}</div><div class="m"><span class="num">${dstr(d).slice(5)} ${pad(d.getHours())}:${pad(d.getMinutes())}</span><span class="num">${s.actual}/${s.planned} 分钟</span>${s.interrupts.length?`<span>打断 ${s.interrupts.length}（${s.interrupts.map(i=>i.tag).join('、')}）</span>`:''}</div></div><span class="chip ${s.status==='completed'?'ok':'dg'}">${s.status==='completed'?'完成':'未完成'}</span></div>`;}).join('')}</div>`;}
+PAGES.focusHistory=function(main){
+  header('专注历史','');const ss=S.sessions.slice().reverse();const done=ss.filter(s=>s.status==='completed');const tot=done.reduce((a,s)=>a+s.actual,0);const ints=ss.reduce((a,s)=>a+s.interrupts.length,0);
+  main.innerHTML=`<div class="kpi"><div class="k"><div class="v">${done.length}</div><div class="l">完成番茄</div></div><div class="k"><div class="v">${fmtHMs(tot)}</div><div class="l">专注总时长</div></div><div class="k"><div class="v">${ints}</div><div class="l">打断次数</div></div></div><div class="sec">${sessionList(ss)}</div>`;
+};
+function renderFloat(){
+  const T=S.timer;const box=$('#float');if(!T||current().page==='focus'){box.innerHTML='';return;}
+  box.innerHTML=`<div class="float"><span class="tm num" id="floatTm">${fmtSec(timerRemaining())}</span><span class="t">${esc(T.title)}${T.running?'':'（已暂停）'}</span><button id="floatGo">查看</button></div>`;$('#floatGo').onclick=()=>go('focus',{});ensureTick();
+}
+document.addEventListener('visibilitychange',()=>{const T=S&&S.timer;if(!T||T.phase!=='focus'||!T.running)return;if(document.hidden){T._hiddenAt=Date.now();}else if(T._hiddenAt){if(Date.now()-T._hiddenAt>3000){T.interrupts.push({t:T._hiddenAt,tag:'切出'});save();if(current().page==='focus')render();toast('记录了一次打断（切出应用）');}T._hiddenAt=null;}});
+</script>
+<script>
+/* ============ 时间记录：派生计算（对齐原表 V4.2 公式） ============ */
+function computeRows(){
+  const rows=[];let date=null,start=0;const daySum={};
+  S.records.forEach((r,i)=>{
+    if(i===0||r.anchor){date=r.date||today();start=r.start||0;}
+    const end=r.end;const dur=durMin(start,end);
+    const row={rec:r,i,date,start,end,dur,wd:wday(date),week:weekKey(date),errs:[]};
+    if(end!==2400&&tmin(end)<tmin(start))row.errs.push('结束时间早于开始时间');
+    if(r.c1&&!S.cats.some(c=>c.c1===r.c1))row.errs.push('大类不在分类表');
+    if(r.c2&&!S.cats.some(c=>c.c1===r.c1&&c.c2===r.c2))row.errs.push('小类不在分类表');
+    if(r.c3&&!S.cats.some(c=>c.c2===r.c2&&c.c3.includes(r.c3)))row.errs.push('明细类不在分类表');
+    daySum[date]=(daySum[date]||0)+dur;rows.push(row);
+    if(end===2400){row.isEnd=true;row.daySum=daySum[date];if(row.daySum!==1440)row.errs.push('当日合计 '+fmtHM(row.daySum)+'，不是 24 小时');start=0;date=dadd(date,1);}else start=end;
+  });
+  return rows;
+}
+function autoClassify(note){
+  if(!note)return null;const n=note.toLowerCase();
+  for(const d of S.dict){for(const k of d.keys){if(k&&n.includes(String(k).toLowerCase())){const c=findC12(d.c3);if(c)return{c1:c.c1,c2:c.c2,c3:d.c3,by:'词典「'+k+'」'};}}}
+  for(const c of S.cats){for(const c3 of c.c3){if(c3&&n.includes(c3.toLowerCase()))return{c1:c.c1,c2:c.c2,c3,by:'明细类「'+c3+'」'};}}
+  return null;
+}
+function addRecord(o){
+  const r={id:uid(),end:o.end,note:o.note||'',c1:o.c1||'',c2:o.c2||'',c3:o.c3||'',src:o.src||'manual',createdAt:Date.now()};
+  if(!r.c3&&r.note){const a=autoClassify(r.note);if(a){r.c1=a.c1;r.c2=a.c2;r.c3=a.c3;r.auto=true;}}
+  if(!S.records.length){const pf=S._pendingFirst||{};r.date=o.date||pf.date||today();r.start=o.start||pf.start||0;delete S._pendingFirst;}
+  if(o.afterId){const i=S.records.findIndex(x=>x.id===o.afterId);S.records.splice(i+1,0,r);}else S.records.push(r);
+  save();return r;
+}
+function catSelectHtml(c1,c2,c3){
+  const c1s=[...new Set(S.cats.map(c=>c.c1))];const c2s=S.cats.filter(c=>c.c1===c1).map(c=>c.c2);const c3s=(S.cats.find(c=>c.c1===c1&&c.c2===c2)||{c3:[]}).c3;
+  const opt=(arr,v,ph)=>`<option value="">${ph}</option>${arr.map(x=>`<option value="${esc(x)}"${x===v?' selected':''}>${esc(x)}</option>`).join('')}${v&&!arr.includes(v)?`<option value="${esc(v)}" selected>${esc(v)}（不在分类表）</option>`:''}`;
+  return `<div class="row" style="gap:6px"><select class="in${c1&&!c1s.includes(c1)?' err':''}" id="c1" aria-label="大类">${opt(c1s,c1,'大类')}</select><select class="in${c2&&!c2s.includes(c2)?' err':''}" id="c2" aria-label="小类">${opt(c2s,c2,'小类')}</select><select class="in${c3&&!c3s.includes(c3)?' err':''}" id="c3" aria-label="明细类">${opt(c3s,c3,'明细类')}</select></div>`;
+}
+function bindCatSelect(el,onChange){
+  const re=()=>{const c1=$('#c1',el).value,c2=$('#c2',el).value,c3=$('#c3',el).value;$('#catbox',el).innerHTML=catSelectHtml(c1,c2,c3);wire();onChange&&onChange({c1,c2,c3});};
+  const wire=()=>{$('#c1',el).onchange=()=>{$('#c2',el).value='';$('#c3',el).value='';re();};$('#c2',el).onchange=()=>{$('#c3',el).value='';re();};$('#c3',el).onchange=()=>{onChange&&onChange(catVals(el));};};
+  wire();
+}
+function catVals(el){return{c1:$('#c1',el).value,c2:$('#c2',el).value,c3:$('#c3',el).value};}
+
+/* ============ 页面：时间记录 ============ */
+let logDays=7;
+PAGES.timelog=function(main,p){
+  header('时间记录','行式时间日志',`<button class="btn sm sec2" id="toAn">分析 ›</button>`);$('#toAn').onclick=()=>go('analysis',{});
+  const rows=computeRows();
+  const last=rows.length?rows[rows.length-1]:null;
+  const pf=S._pendingFirst||{};const nextStart=last?(last.end===2400?0:last.end):(pf.start||0);const nextDate=last?(last.end===2400?dadd(last.date,1):last.date):(pf.date||today());
+  const byDay={};rows.forEach(r=>{(byDay[r.date]=byDay[r.date]||[]).push(r);});
+  const days=Object.keys(byDay).sort().reverse();const shown=days.slice(0,logDays);
+  main.innerHTML=`<div class="card" id="quick"><div class="row"><div class="sp"><div class="small muted">${rows.length?'下一行':'第一行'} · <span class="num">${fmtDW(nextDate)}</span> 开始 <b class="num">${fmtT(nextStart)}</b></div></div>${rows.length?'':`<button class="lnk" id="setFirst">设置起始日期/时间</button>`}</div>
+    <div class="row mt8" style="align-items:flex-start"><div style="width:112px;flex:none"><input class="in mono" id="qEnd" inputmode="numeric" placeholder="1305" aria-label="结束时间，如 1305" maxlength="5"><div class="hint mt8" id="qEndShow">&nbsp;</div></div><div class="sp"><input class="in" id="qNote" placeholder="备注（自动分类）" aria-label="备注"><div class="hint mt8" id="qCat">&nbsp;</div></div></div>
+    <div id="catbox" class="mt8">${catSelectHtml('','','')}</div>
+    <div class="row mt8"><button class="btn sm sec2" id="qNow">取当前时刻</button><button class="btn sm sec2" id="q2400">2400 结束当天</button><span class="sp"></span><button class="btn" id="qAdd">添加记录</button></div></div>
+  ${rows.length?shown.map(d=>{const rs=byDay[d];const sum=rs.reduce((a,r)=>a+r.dur,0);const endRow=rs.find(r=>r.isEnd);
+    return `<div class="ledger mt12"><div class="lday"><span class="d">${fmtDW(d)}</span><span class="chip">${rs[0].week}</span><span class="sp"></span>${endRow?(sum===1440?'<span class="chk-ok">✓ 24:00 校验通过</span>':`<span class="chk-bad">校验 ${fmtHM(sum)} ≠ 24 小时</span>`):`<span class="muted small num">已记 ${fmtHM(sum)}</span>`}</div>
+    ${rs.map(r=>`<div class="lrow${r.isEnd?' end':''}${r.errs.length?' bad':''}${p.edit===r.rec.id?' sel':''}" data-id="${r.rec.id}" role="button" tabindex="0"><span class="tm">${fmtT(r.start)}</span><span class="tm${r.errs.some(e=>e.includes('早于'))?' bad-t':''}">${fmtT(r.end)}</span><div class="nt"><div class="n">${esc(r.rec.note)||'<span class="muted">（无备注）</span>'}</div><div class="c">${r.rec.c1?`${esc(r.rec.c1)} › ${esc(r.rec.c2)} › <b>${esc(r.rec.c3)}</b>`:'<span class="bad-t">未分类</span>'}${r.rec.src==='focus'?' · 番茄':''}${r.errs.length?` · <span class="bad-t">${esc(r.errs.join('；'))}</span>`:''}</div></div><span class="dur">${fmtHMs(r.dur)}</span></div>`).join('')}</div>`;}).join('')+(days.length>logDays?`<div class="mt12" style="text-align:center"><button class="btn sm sec2" id="more">显示更早（还有 ${days.length-logDays} 天）</button></div>`:''):`<div class="empty mt12">还没有时间记录。<br>像填表一样逐行录入：只需输入每段的<b>结束时间</b>，开始时间自动承接上一行；一天最后一行输入 <span class="num">2400</span>。</div>`}`;
+  const qEnd=$('#qEnd'),qNote=$('#qNote');let manualCat=false;
+  qEnd.oninput=()=>{const t=parseT(qEnd.value);$('#qEndShow').textContent=qEnd.value?(t.ok?fmtT(t.val)+(t.val!==2400&&tmin(t.val)<tmin(nextStart)?'（早于开始）':'　'):'无效时间'):' ';qEnd.classList.toggle('err',!!qEnd.value&&(!t.ok||(t.val!==2400&&tmin(t.val)<tmin(nextStart))));};
+  qNote.oninput=()=>{if(manualCat)return;const a=autoClassify(qNote.value);if(a){$('#catbox').innerHTML=catSelectHtml(a.c1,a.c2,a.c3);bindCatSelect(main,()=>{manualCat=true;$('#qCat').textContent='手动分类';});$('#qCat').textContent='自动匹配：'+a.by;}else{$('#qCat').textContent=' ';}};
+  bindCatSelect(main,()=>{manualCat=true;$('#qCat').textContent='手动分类';});
+  $('#qNow').onclick=()=>{qEnd.value=String(nowHHMM()).padStart(4,'0');qEnd.oninput();};$('#q2400').onclick=()=>{qEnd.value='2400';qEnd.oninput();};
+  const doAdd=()=>{const t=parseT(qEnd.value);if(!t.ok){toast('结束时间无效：小时 0–23、分钟 0–59，或 2400',true);qEnd.focus();return;}if(t.val!==2400&&tmin(t.val)<tmin(nextStart)){toast('结束时间早于开始时间 '+fmtT(nextStart)+'，请检查',true);return;}
+    const c=catVals(main);addRecord({end:t.val,note:qNote.value.trim(),c1:c.c1,c2:c.c2,c3:c.c3});toast(t.val===2400?'已结束当天，已校验合计':'已添加');render();setTimeout(()=>{const e=$('#qEnd');if(e)e.focus();},50);};
+  $('#qAdd').onclick=doAdd;qNote.addEventListener('keydown',e=>{if(e.key==='Enter')doAdd();});qEnd.addEventListener('keydown',e=>{if(e.key==='Enter'){qNote.focus();}});
+  const sf=$('#setFirst');if(sf)sf.onclick=()=>firstRowSheet();
+  const more=$('#more');if(more)more.onclick=()=>{logDays+=14;render();};
+  $$('.lrow',main).forEach(el=>{el.onclick=()=>editRecord(el.dataset.id);el.onkeydown=e=>{if(e.key==='Enter')el.onclick();};});
+};
+function firstRowSheet(){
+  const first=S.records[0];const date=first&&first.date||today();const start=first&&first.start||0;
+  sheet(`<h2>起始日期与时间</h2><p class="hint">对应原表 A2 单元格：新表需手动输入开始日期。之后日期与开始时间自动承接。</p><div class="f"><label>起始日期</label><input class="in" type="date" id="fd" value="${date}"></div><div class="f"><label>起始时间（通常 0000）</label><input class="in mono" id="fs" inputmode="numeric" value="${String(start).padStart(4,'0')}"></div><div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">保存</button></div>`,el=>{
+    $('#cc',el).onclick=closeSheet;$('#ok',el).onclick=()=>{const t=parseT($('#fs',el).value);if(!t.ok||t.val===2400){toast('起始时间无效',true);return;}if(first){first.date=$('#fd',el).value;first.start=t.val;}else{S._pendingFirst={date:$('#fd',el).value,start:t.val};}save();closeSheet();render();};});
+}
+function editRecord(id){
+  const i=S.records.findIndex(r=>r.id===id);const r=S.records[i];const rows=computeRows();const row=rows[i];
+  sheet(`<h2>编辑记录</h2><div class="small muted mt8 num">${fmtDW(row.date)} · 开始 ${fmtT(row.start)}${i===0?'（首行可改起始）':'（自动承接上一行）'}</div>
+  <div class="f"><label>结束时间</label><input class="in mono" id="re" inputmode="numeric" value="${String(r.end).padStart(4,'0')}"></div>
+  <div class="f"><label>备注</label><input class="in" id="rn" value="${esc(r.note)}"></div>
+  <div class="f"><label>分类</label><div id="catbox">${catSelectHtml(r.c1,r.c2,r.c3)}</div><div class="row mt8"><button class="lnk" id="reauto">按备注重新自动分类</button></div></div>
+  <div class="row mt12 wrap"><button class="btn sm sec2" id="ins">在此行后插入一行</button>${i===0?'<button class="btn sm sec2" id="first">改起始日期</button>':''}<span class="sp"></span><button class="btn sm danger" id="del">删除</button></div>
+  <div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">保存</button></div>`,el=>{
+    bindCatSelect(el);$('#cc',el).onclick=closeSheet;
+    $('#reauto',el).onclick=()=>{const a=autoClassify($('#rn',el).value);if(a){$('#catbox',el).innerHTML=catSelectHtml(a.c1,a.c2,a.c3);bindCatSelect(el);toast('匹配：'+a.by);}else toast('备注未命中词典或明细类',true);};
+    $('#del',el).onclick=()=>{confirmS('删除这一行？后续行的开始时间会自动重新承接。',()=>{S.records.splice(i,1);if(i===0&&S.records.length){S.records[0].date=S.records[0].date||row.date;S.records[0].start=S.records[0].start||row.start;}save();closeSheet();render();});};
+    $('#ins',el).onclick=()=>{closeSheet();sheet(`<h2>插入一行</h2><p class="hint">插在「${esc(r.note)||fmtT(r.end)}」之后，开始时间自动为 ${fmtT(r.end===2400?0:r.end)}。</p><div class="f"><label>结束时间</label><input class="in mono" id="ie" inputmode="numeric" placeholder="1305"></div><div class="f"><label>备注</label><input class="in" id="in2"></div><div class="acts"><button class="btn sec2" id="cc">取消</button><button class="btn" id="ok">插入</button></div>`,el2=>{$('#cc',el2).onclick=closeSheet;$('#ok',el2).onclick=()=>{const t=parseT($('#ie',el2).value);if(!t.ok){toast('结束时间无效',true);return;}addRecord({end:t.val,note:$('#in2',el2).value.trim(),afterId:r.id});closeSheet();render();};});};
+    const f=$('#first',el);if(f)f.onclick=()=>{closeSheet();firstRowSheet();};
+    $('#ok',el).onclick=()=>{const t=parseT($('#re',el).value);if(!t.ok){toast('结束时间无效',true);return;}r.end=t.val;r.note=$('#rn',el).value.trim();Object.assign(r,catVals(el));r.auto=false;save();closeSheet();render();};
+  });
+}
+
+/* ============ 时间使用分析 ============ */
+let anRange='week';
+function rangeRows(rows,range){const t=today();if(range==='week'){const m=weekMonday(t),e=dadd(m,6);return rows.filter(r=>r.date>=m&&r.date<=e);}if(range==='month'){const k=ymKey(t);return rows.filter(r=>ymKey(r.date)===k);}if(range==='year'){const y=t.slice(0,4);return rows.filter(r=>r.date.slice(0,4)===y);}return rows;}
+function sumBy(rows,fn){const m={};rows.forEach(r=>{const k=fn(r)||'（未分类）';m[k]=(m[k]||0)+r.dur;});return m;}
+function c1Color(c1){const list=[...new Set(S.cats.map(c=>c.c1))];const i=list.indexOf(c1);return i<0?'var(--line)':C1COLORS[i%C1COLORS.length];}
+function donut(m,total){const keys=Object.keys(m);let acc=0;const R=52,C=2*Math.PI*R;
+  return `<svg viewBox="0 0 140 140" width="140" height="140" role="img" aria-label="大类占比"><g transform="rotate(-90 70 70)">${keys.map(k=>{const v=m[k]/total;const s=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${c1Color(k)}" stroke-width="18" stroke-dasharray="${(v*C).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-acc*C).toFixed(2)}"/>`;acc+=v;return s;}).join('')}</g><text x="70" y="66" text-anchor="middle" style="font-size:12px;fill:var(--ink);font-weight:600">${fmtHMs(total)}</text><text x="70" y="82" text-anchor="middle">合计</text></svg>`;}
+PAGES.analysis=function(main){
+  header('时间分析','');
+  const all=computeRows();const rows=rangeRows(all,anRange);const total=rows.reduce((a,r)=>a+r.dur,0);const days=new Set(rows.map(r=>r.date)).size;
+  const byC1=sumBy(rows,r=>r.rec.c1);const c1List=[...new Set(S.cats.map(c=>c.c1))];const core=byC1[c1List[0]]||0;
+  const ent=r=>r.rec.c3?'娱乐'===r.rec.c2:false;const entMin=rows.filter(ent).reduce((a,r)=>a+r.dur,0);
+  // 三级树
+  const tree={};rows.forEach(r=>{const a=r.rec.c1||'（未分类）',b=r.rec.c2||'（未分类）',c=r.rec.c3||'（未分类）';tree[a]=tree[a]||{v:0,ch:{}};tree[a].v+=r.dur;tree[a].ch[b]=tree[a].ch[b]||{v:0,ch:{}};tree[a].ch[b].v+=r.dur;tree[a].ch[b].ch[c]=(tree[a].ch[b].ch[c]||0)+r.dur;});
+  const brow=(name,v,lvl,color,extra)=>`<div class="brow lvl${lvl}" ${extra||''}><span class="nm">${lvl===1?`<i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${color};margin-right:6px;vertical-align:-1px"></i>`:''}${esc(name)}</span><span class="bar"><i style="width:${total?Math.round(v/total*100):0}%;background:${color}"></i></span><span class="v">${fmtHM(v)}</span><span class="pc">${total?(v/total*100).toFixed(1):0}%</span></div>`;
+  // 日趋势（近 14 天，堆叠）
+  const t=today();const trendDays=[];for(let i=13;i>=0;i--)trendDays.push(dadd(t,-i));
+  const tm={};all.forEach(r=>{if(trendDays.includes(r.date)){tm[r.date]=tm[r.date]||{};tm[r.date][r.rec.c1||'（未分类）']=(tm[r.date][r.rec.c1||'（未分类）']||0)+r.dur;}});
+  const W=340,H=120,bw=W/14;const trend=`<svg viewBox="0 0 ${W} ${H+18}" width="100%" role="img" aria-label="近14天每日记录时长"><line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="var(--line)"/><line x1="0" y1="${H-H*0.5}" x2="${W}" y2="${H-H*0.5}" stroke="var(--line2)" stroke-dasharray="3 3"/><text x="2" y="${H-H*0.5-3}">12h</text>${trendDays.map((d,i)=>{const m=tm[d]||{};let y=H;return Object.keys(m).map(k=>{const h=m[k]/1440*H;y-=h;return `<rect x="${(i*bw+3).toFixed(1)}" y="${y.toFixed(1)}" width="${(bw-6).toFixed(1)}" height="${h.toFixed(1)}" fill="${c1Color(k)}"/>`;}).join('')+(i%2===1?`<text x="${(i*bw+bw/2).toFixed(1)}" y="${H+13}" text-anchor="middle">${d.slice(5).replace('-','/')}</text>`:'');}).join('')}</svg>`;
+  // 月度 / 星期汇总（全部数据，按当年）
+  const yr=t.slice(0,4);const mon={};all.filter(r=>r.date.slice(0,4)===yr).forEach(r=>{const k=+r.date.slice(5,7);mon[k]=(mon[k]||0)+r.dur;});
+  const wdm={};rows.forEach(r=>{wdm[r.wd]=(wdm[r.wd]||0)+r.dur;});const wdDays={};rows.forEach(r=>{wdDays[r.wd]=wdDays[r.wd]||new Set();wdDays[r.wd].add(r.date);});
+  main.innerHTML=`<div class="seg block" id="rg">${[['week','本周'],['month','本月'],['year','今年'],['all','全部']].map(([k,l])=>`<button data-r="${k}" class="${anRange===k?'on':''}">${l}</button>`).join('')}</div>
+  <div class="kpi mt12"><div class="k"><div class="v">${fmtHMs(total)}</div><div class="l">记录合计 · ${days} 天</div></div><div class="k"><div class="v">${total?(core/total*100).toFixed(0):0}%</div><div class="l">${esc(c1List[0]||'中心工作')}</div></div><div class="k"><div class="v">${total?(entMin/total*100).toFixed(0):0}%</div><div class="l">娱乐占比</div></div></div>
+  ${!rows.length?'<div class="empty mt12">这个范围内没有时间记录</div>':`
+  <div class="card mt12"><div class="row" style="align-items:center;gap:14px">${donut(byC1,total)}<div class="legend" style="flex-direction:column;gap:6px">${Object.keys(byC1).map(k=>`<span><i style="background:${c1Color(k)}"></i>${esc(k)} <span class="num">${(byC1[k]/total*100).toFixed(1)}%</span></span>`).join('')}</div></div></div>
+  <div class="sec"><div class="sec-h"><h2>三级分类汇总</h2><span class="hint">点大类展开</span></div><div class="card" id="tree">${Object.keys(tree).sort((a,b)=>tree[b].v-tree[a].v).map(a=>brow(a,tree[a].v,1,c1Color(a),`data-l1="${esc(a)}" role="button" tabindex="0"`)+`<div hidden data-ch="${esc(a)}">${Object.keys(tree[a].ch).sort((x,y)=>tree[a].ch[y].v-tree[a].ch[x].v).map(b=>brow(b,tree[a].ch[b].v,2,c1Color(a))+Object.keys(tree[a].ch[b].ch).sort((x,y)=>tree[a].ch[b].ch[y]-tree[a].ch[b].ch[x]).map(c=>brow(c,tree[a].ch[b].ch[c],3,'var(--line)')).join('')).join('')}</div>`).join('')}</div></div>`}
+  <div class="sec"><div class="sec-h"><h2>近 14 天趋势</h2></div><div class="card">${trend}<div class="legend mt8">${c1List.map(k=>`<span><i style="background:${c1Color(k)}"></i>${esc(k)}</span>`).join('')}</div></div></div>
+  <div class="sec"><div class="sec-h"><h2>月度汇总 · ${yr}</h2></div><div class="card tblwrap"><table class="tbl"><tr><th>月份</th><th class="n">花费时间</th><th class="n">日均</th></tr>${Object.keys(mon).map(Number).sort((a,b)=>a-b).map(m=>{const dn=new Set(all.filter(r=>r.date.slice(0,4)===yr&&+r.date.slice(5,7)===m).map(r=>r.date)).size;return `<tr><td>${m} 月</td><td class="n">${fmtHM(mon[m])}</td><td class="n">${fmtHM(mon[m]/dn)}</td></tr>`;}).join('')||'<tr><td colspan="3" class="muted">暂无</td></tr>'}<tr><td><b>总计</b></td><td class="n"><b>${fmtHM(Object.values(mon).reduce((a,b)=>a+b,0))}</b></td><td></td></tr></table></div></div>
+  <div class="sec"><div class="sec-h"><h2>星期汇总</h2><span class="hint">当前范围</span></div><div class="card tblwrap"><table class="tbl"><tr><th>星期</th><th class="n">花费时间</th><th class="n">天数</th><th class="n">日均</th></tr>${[1,2,3,4,5,6,7].map(w=>`<tr><td>星期${WD[w-1]}</td><td class="n">${fmtHM(wdm[w]||0)}</td><td class="n">${wdDays[w]?wdDays[w].size:0}</td><td class="n">${wdDays[w]?fmtHM((wdm[w]||0)/wdDays[w].size):'–'}</td></tr>`).join('')}</table></div></div>`;
+  $$('#rg button').forEach(b=>b.onclick=()=>{anRange=b.dataset.r;render();});
+  $$('[data-l1]',main).forEach(b=>{const tg=()=>{const ch=$(`[data-ch="${CSS.escape(b.dataset.l1)}"]`,main);ch.hidden=!ch.hidden;};b.onclick=tg;b.onkeydown=e=>{if(e.key==='Enter')tg();};});
+};
+
+/* ============ 周复盘 ============ */
+PAGES.review=function(main,p){
+  const mon=p.week?(String(p.week).includes('W')?isoWeekMonday(p.week):weekMonday(p.week)):weekMonday(today());
+  const key=weekKey(mon);const dates=weekDates(mon);const rv=S.reviews[key]||(S.reviews[key]={done:'',undone:'',reason:'',archivedAt:null});
+  header('周复盘',key);
+  const wp=weekPlan(key);const items=[];for(let d=1;d<=7;d++)wp.days[d].forEach(it=>items.push({d,it}));
+  const todos=S.todos.filter(x=>x.date>=dates[0]&&x.date<=dates[6]);const tdone=todos.filter(x=>x.done).length;
+  const rows=computeRows().filter(r=>r.date>=dates[0]&&r.date<=dates[6]);const total=rows.reduce((a,r)=>a+r.dur,0);const byC1=sumBy(rows,r=>r.rec.c1);
+  const ss=S.sessions.filter(s=>{const d=dstr(new Date(s.start));return d>=dates[0]&&d<=dates[6];});const sdone=ss.filter(s=>s.status==='completed');
+  const byDim={};todos.forEach(x=>{if(x.dim){byDim[x.dim]=byDim[x.dim]||{n:0,d:0};byDim[x.dim].n++;if(x.done)byDim[x.dim].d++;}});
+  main.innerHTML=`<div class="switch"><button class="iconbtn" id="pw" aria-label="上一周">‹</button><span class="val num" style="font-size:15px">${weekLabel(mon)}</span><button class="iconbtn" id="nw" aria-label="下一周">›</button></div>
+  <div class="kpi"><div class="k"><div class="v">${items.filter(x=>x.it.done).length}/${items.length}</div><div class="l">周计划完成</div></div><div class="k"><div class="v">${tdone}/${todos.length}</div><div class="l">待办完成</div></div><div class="k"><div class="v">${sdone.length}</div><div class="l">番茄 · ${fmtHMs(sdone.reduce((a,s)=>a+s.actual,0))}</div></div></div>
+  <div class="sec"><div class="sec-h"><h2>计划 vs 实际</h2></div><div class="card">${items.length?items.map(({d,it})=>`<div class="wpi${it.done?' done':''}"><span class="chk${it.done?' on':''}">${it.done?'✓':''}</span><span class="tx">${esc(it.text)}</span><span class="muted small">周${WD[d-1]}</span></div>`).join(''):'<div class="muted small">本周没有周计划事项</div>'}
+  <div class="mt12 small muted">时间记录合计 <b class="num">${fmtHM(total)}</b>（${new Set(rows.map(r=>r.date)).size} 天）</div>${Object.keys(byC1).map(k=>`<div class="brow"><span class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c1Color(k)};margin-right:6px"></i>${esc(k)}</span><span class="bar"><i style="width:${total?Math.round(byC1[k]/total*100):0}%;background:${c1Color(k)}"></i></span><span class="v">${fmtHM(byC1[k])}</span><span class="pc">${total?(byC1[k]/total*100).toFixed(0):0}%</span></div>`).join('')}
+  ${Object.keys(byDim).length?`<div class="mt12 small muted">按维度：</div><div class="chips mt8">${Object.keys(byDim).map(k=>`<span class="chip">${esc(k)} <span class="num">${byDim[k].d}/${byDim[k].n}</span></span>`).join('')}</div>`:''}</div></div>
+  <div class="sec"><div class="sec-h"><h2>结论</h2>${rv.archivedAt?`<span class="chip ok">已归档 ${dstr(new Date(rv.archivedAt)).slice(5)}</span>`:''}</div>
+  <div class="f"><label>本周完成</label><textarea class="in" id="rd" placeholder="完成了什么，哪些超出预期">${esc(rv.done)}</textarea></div>
+  <div class="f"><label>未完成</label><textarea class="in" id="ru" placeholder="哪些没做到">${esc(rv.undone)}</textarea></div>
+  <div class="f"><label>原因</label><textarea class="in" id="rr" placeholder="为什么？时间去了哪里？">${esc(rv.reason)}</textarea></div>
+  <div class="row mt12"><button class="btn sec2" id="toDiary">写观察日记 ›</button><span class="sp"></span><button class="btn" id="arch">${rv.archivedAt?'更新归档':'生成复盘并归档'}</button></div></div>`;
+  const nav=n=>{ROUTE.stack[ROUTE.stack.length-1].params={week:dadd(mon,n*7)};render();};$('#pw').onclick=()=>nav(-1);$('#nw').onclick=()=>nav(1);
+  const bind=(id,k)=>{$(id).addEventListener('input',e=>{rv[k]=e.target.value;save();});};bind('#rd','done');bind('#ru','undone');bind('#rr','reason');
+  $('#arch').onclick=()=>{rv.archivedAt=Date.now();rv.snapshot={plan:items.length,planDone:items.filter(x=>x.it.done).length,todos:todos.length,todosDone:tdone,total,byC1,pomo:sdone.length};save();toast('已归档到「历史复盘」');render();};
+  $('#toDiary').onclick=()=>go('diary',{week:mon});
+};
+function isoWeekMonday(key){const [y,w]=key.split('-W').map(Number);const jan4=new Date(y,0,4);const mon=dadd(dstr(jan4),1-wday(dstr(jan4)));return dadd(mon,(w-1)*7);}
+PAGES.reviews=function(main){
+  header('历史复盘','');const keys=Object.keys(S.reviews).filter(k=>S.reviews[k].archivedAt).sort().reverse();
+  main.innerHTML=keys.length?`<div class="list">${keys.map(k=>{const r=S.reviews[k];const s=r.snapshot||{};return `<div class="item" data-k="${k}" role="button" tabindex="0"><div class="t"><div class="n">${k}</div><div class="m"><span class="num">计划 ${s.planDone||0}/${s.plan||0}</span><span class="num">待办 ${s.todosDone||0}/${s.todos||0}</span><span class="num">${fmtHMs(s.total||0)}</span></div><div class="small mt8" style="white-space:pre-line">${esc((r.done||'').slice(0,80))}</div></div><span class="muted">›</span></div>`;}).join('')}</div>`:'<div class="empty">还没有归档的周复盘</div>';
+  $$('.item',main).forEach(el=>el.onclick=()=>go('review',{week:isoWeekMonday(el.dataset.k)}));
+};
+</script>
+<script>
+/* ============ 时间日志 Journal（按日） ============ */
+function daySummary(date){
+  const rows=computeRows().filter(r=>r.date===date);const total=rows.reduce((a,r)=>a+r.dur,0);const byC1=sumBy(rows,r=>r.rec.c1);
+  const ss=S.sessions.filter(s=>dstr(new Date(s.start))===date&&s.status==='completed');const focus=ss.reduce((a,s)=>a+s.actual,0);
+  const todos=todosFor(date);return{rows,total,byC1,focus,pomo:ss.length,todos:todos.length,todosDone:todos.filter(x=>x.done).length,ended:rows.some(r=>r.isEnd)};
+}
+PAGES.journal=function(main,p){
+  const date=p.date||today();header('时间日志',fmtDW(date));
+  const j=S.journals[date]||(S.journals[date]={text:'',draft:true});const sm=daySummary(date);
+  main.innerHTML=`<div class="switch"><button class="iconbtn" id="pd" aria-label="前一天">‹</button><span class="val num" style="font-size:15px">${fmtDW(date)}</span><button class="iconbtn" id="nd" aria-label="后一天">›</button></div>
+  <div class="kpi"><div class="k"><div class="v">${fmtHMs(sm.total)}</div><div class="l">已记录${sm.ended?' · 已结束':''}</div></div><div class="k"><div class="v">${fmtHMs(sm.focus)}</div><div class="l">专注 · ${sm.pomo} 番茄</div></div><div class="k"><div class="v">${sm.todosDone}/${sm.todos}</div><div class="l">待办完成</div></div></div>
+  ${sm.total?`<div class="card mt12">${Object.keys(sm.byC1).map(k=>`<div class="brow"><span class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c1Color(k)};margin-right:6px"></i>${esc(k)}</span><span class="bar"><i style="width:${Math.round(sm.byC1[k]/sm.total*100)}%;background:${c1Color(k)}"></i></span><span class="v">${fmtHM(sm.byC1[k])}</span><span class="pc">${(sm.byC1[k]/sm.total*100).toFixed(0)}%</span></div>`).join('')}<div class="small muted mt8">最长的三段：${sm.rows.slice().sort((a,b)=>b.dur-a.dur).slice(0,3).map(r=>esc(r.rec.note||r.rec.c3||'未备注')+' '+fmtHMs(r.dur)).join(' · ')}</div></div>`:`<div class="empty mt12">这一天还没有时间记录 <button class="lnk" id="toLog">去记录</button></div>`}
+  <div class="sec"><div class="sec-h"><h2>观察</h2><span class="chip ${j.draft?'wn':'ok'}">${j.draft?'草稿':'已保存'}</span><span class="sp"></span><span class="hint">每晚 ${esc(S.settings.journalRemind)} 提醒</span></div>
+  <textarea class="in" id="jt" style="min-height:180px" placeholder="根据上面的数据观察自己：时间花在哪了？哪段最值得、哪段被浪费？明天想怎么调整？">${esc(j.text)}</textarea>
+  <div class="row mt12"><button class="btn sec2" id="hist">历史日志 ›</button><span class="sp"></span><button class="btn" id="sv">保存日志</button></div></div>`;
+  $('#pd').onclick=()=>{ROUTE.stack[ROUTE.stack.length-1].params={date:dadd(date,-1)};render();};$('#nd').onclick=()=>{ROUTE.stack[ROUTE.stack.length-1].params={date:dadd(date,1)};render();};
+  const tl=$('#toLog');if(tl)tl.onclick=()=>go('timelog',{});
+  $('#jt').addEventListener('input',e=>{j.text=e.target.value;j.draft=true;save();});
+  $('#sv').onclick=()=>{j.text=$('#jt').value;j.draft=false;j.savedAt=Date.now();j.snapshot={total:sm.total,focus:sm.focus,byC1:sm.byC1};save();toast('日志已保存');render();};
+  $('#hist').onclick=()=>go('journals',{});
+};
+PAGES.journals=function(main){header('历史日志','');const keys=Object.keys(S.journals).filter(k=>S.journals[k].text).sort().reverse();
+  main.innerHTML=keys.length?`<div class="list">${keys.map(k=>`<div class="item" data-k="${k}" role="button" tabindex="0"><div class="t"><div class="n">${fmtDW(k)} ${S.journals[k].draft?'<span class="chip wn">草稿</span>':''}</div><div class="small muted mt8" style="white-space:pre-line">${esc(S.journals[k].text.slice(0,100))}</div></div><span class="muted">›</span></div>`).join('')}</div>`:'<div class="empty">还没有日志</div>';
+  $$('.item',main).forEach(el=>el.onclick=()=>go('journal',{date:el.dataset.k}));};
+
+/* ============ 观察日记（按周） ============ */
+PAGES.diary=function(main,p){
+  const mon=p.week?(String(p.week).includes('W')?isoWeekMonday(p.week):weekMonday(p.week)):weekMonday(today());const key=weekKey(mon);
+  header('观察日记',key);const d=S.diaries[key]||(S.diaries[key]={good:'',waste:'',improve:''});const rv=S.reviews[key];
+  main.innerHTML=`<div class="switch"><button class="iconbtn" id="pw" aria-label="上一周">‹</button><span class="val num" style="font-size:15px">${weekLabel(mon)}</span><button class="iconbtn" id="nw" aria-label="下一周">›</button></div>
+  <div class="card small">${rv&&rv.archivedAt?`<span class="chip ok">已关联周复盘</span> 计划 ${rv.snapshot.planDone}/${rv.snapshot.plan} · 待办 ${rv.snapshot.todosDone}/${rv.snapshot.todos} · 记录 ${fmtHMs(rv.snapshot.total)} · 番茄 ${rv.snapshot.pomo}`:`<span class="muted">本周复盘尚未归档</span> <button class="lnk" id="toRv">去复盘 ›</button>`}<div class="row mt8"><button class="btn sm sec2" id="quote" ${rv&&rv.archivedAt?'':'disabled'}>引用周复盘数据</button></div></div>
+  <div class="f"><label>本周做得好的</label><textarea class="in" id="dg">${esc(d.good)}</textarea></div>
+  <div class="f"><label>时间被浪费的</label><textarea class="in" id="dw">${esc(d.waste)}</textarea></div>
+  <div class="f"><label>下周改进点（每行一条）</label><textarea class="in" id="di">${esc(d.improve)}</textarea></div>
+  <div class="row mt12"><span class="hint">自动保存</span><span class="sp"></span><button class="btn" id="push">改进点 → 写入下周周计划</button></div>`;
+  const nav=n=>{ROUTE.stack[ROUTE.stack.length-1].params={week:dadd(mon,n*7)};render();};$('#pw').onclick=()=>nav(-1);$('#nw').onclick=()=>nav(1);
+  const tr=$('#toRv');if(tr)tr.onclick=()=>go('review',{week:mon});
+  const bind=(id,k)=>$(id).addEventListener('input',e=>{d[k]=e.target.value;save();});bind('#dg','good');bind('#dw','waste');bind('#di','improve');
+  $('#quote').onclick=()=>{const s=rv.snapshot;const top=Object.keys(s.byC1||{}).sort((a,b)=>s.byC1[b]-s.byC1[a]).map(k=>k+' '+fmtHMs(s.byC1[k])).join('，');const txt=`【${key} 数据】计划完成 ${s.planDone}/${s.plan}，待办完成 ${s.todosDone}/${s.todos}，记录 ${fmtHM(s.total)}，番茄 ${s.pomo} 个。分类：${top}。\n复盘结论：完成—${rv.done||'（空）'}；未完成—${rv.undone||'（空）'}；原因—${rv.reason||'（空）'}\n`;d.good=txt+d.good;save();render();};
+  $('#push').onclick=()=>{const lines=d.improve.split(/\n/).map(x=>x.trim()).filter(Boolean);if(!lines.length){toast('先写下下周改进点',true);return;}const nm=dadd(mon,7);const wp=weekPlan(weekKey(nm));let n=0;lines.forEach(l=>{if(!wp.days[1].some(x=>x.text===l)){wp.days[1].push({id:uid(),text:l,done:false,dim:'',fromDiary:key});n++;}});save();toast('已写入 '+weekKey(nm)+' 周计划 '+n+' 条');weekSel=nm;go('weekplan',{});};
+};
+
+/* ============ 目标感校准 ============ */
+PAGES.calib=function(main){
+  header('目标感校准','本轮 PDCA 汇总');
+  const t=today();const mon=weekMonday(t);const dates=weekDates(mon);const key=weekKey(mon);const prevMon=dadd(mon,-7);const prevDates=weekDates(prevMon);
+  const todos=S.todos.filter(x=>x.date>=dates[0]&&x.date<=dates[6]);const rate=todos.length?Math.round(todos.filter(x=>x.done).length/todos.length*100):0;
+  const ss=S.sessions.filter(s=>{const d=dstr(new Date(s.start));return d>=dates[0]&&d<=dates[6]&&s.status==='completed';});const focus=ss.reduce((a,s)=>a+s.actual,0);
+  const all=computeRows();const rows=all.filter(r=>r.date>=dates[0]&&r.date<=dates[6]);const total=rows.reduce((a,r)=>a+r.dur,0);const byC1=sumBy(rows,r=>r.rec.c1);
+  const rv=S.reviews[key];
+  // 规则
+  const rules=[];
+  const dimUse=d=>(S.todos.filter(x=>x.dim===d&&x.date>=prevDates[0]&&x.date<=dates[6]).length)+([weekKey(prevMon),key].reduce((a,k)=>{const wp=weekPlan(k);let n=0;for(let i=1;i<=7;i++)n+=wp.days[i].filter(it=>it.dim===d).length;return a+n;},0));
+  const yg=grid('Y'+t.slice(0,4)).goals;DIMS.forEach((d,i)=>{if((yg[i]||'').trim()&&dimUse(d)===0)rules.push({t:`「${d}」有年度目标，但连续两周没有任何计划或待办`,ev:'依据：本周与上周的周计划、待办均未标注此维度'});});
+  const entW=rows.filter(r=>r.rec.c2==='娱乐').reduce((a,r)=>a+r.dur,0);if(total&&entW/total>0.25)rules.push({t:`娱乐占比 ${(entW/total*100).toFixed(0)}%，超过 25%`,ev:`依据：本周娱乐 ${fmtHM(entW)} / 记录合计 ${fmtHM(total)}`});
+  const daysRec=new Set(rows.map(r=>r.date)).size;const passed=dates.filter(d=>d<=t).length;if(passed-daysRec>=2)rules.push({t:`本周有 ${passed-daysRec} 天没有时间记录`,ev:'依据：已过 '+passed+' 天，其中 '+daysRec+' 天有记录'});
+  const c1List=[...new Set(S.cats.map(c=>c.c1))];if(total&&!(byC1[c1List[0]]))rules.push({t:`本周「${c1List[0]}」为 0`,ev:'依据：时间记录中没有该大类'});
+  const ab=S.sessions.filter(s=>{const d=dstr(new Date(s.start));return d>=dates[0]&&d<=dates[6]&&s.status==='abandoned';}).length;if(ab>=3)rules.push({t:`本周放弃了 ${ab} 个番茄`,ev:'依据：专注记录中状态为未完成'});
+  main.innerHTML=`<div class="kpi"><div class="k"><div class="v">${rate}%</div><div class="l">待办完成率</div></div><div class="k"><div class="v">${fmtHMs(focus)}</div><div class="l">专注 · ${ss.length} 番茄</div></div><div class="k"><div class="v">${fmtHMs(total)}</div><div class="l">时间记录</div></div></div>
+  <div class="card mt12">${total?Object.keys(byC1).map(k=>`<div class="brow"><span class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c1Color(k)};margin-right:6px"></i>${esc(k)}</span><span class="bar"><i style="width:${Math.round(byC1[k]/total*100)}%;background:${c1Color(k)}"></i></span><span class="v">${fmtHM(byC1[k])}</span><span class="pc">${(byC1[k]/total*100).toFixed(0)}%</span></div>`).join(''):'<span class="muted small">本周暂无时间记录</span>'}
+  <div class="small mt12"><span class="muted">复盘结论：</span>${rv&&(rv.done||rv.undone||rv.reason)?esc([rv.done,rv.undone,rv.reason].filter(Boolean).join(' / ')):'<span class="muted">尚未填写</span>'}</div></div>
+  <div class="sec"><div class="sec-h"><h2>校准提示</h2><span class="hint">基于规则，可解释</span></div>${rules.length?rules.map(r=>`<div class="rule"><b>${esc(r.t)}</b><div class="ev">${esc(r.ev)}</div></div>`).join(''):'<div class="card small muted">本周没有命中任何规则。</div>'}</div>
+  <div class="row mt16"><button class="btn sec2" id="toRv">周复盘</button><button class="btn sec2" id="toD">观察日记</button><span class="sp"></span><button class="btn" id="toW">下周计划</button></div>`;
+  $('#toRv').onclick=()=>go('review',{week:mon});$('#toD').onclick=()=>go('diary',{week:mon});$('#toW').onclick=()=>{weekSel=dadd(mon,7);go('weekplan',{});};
+};
+
+/* ============ 我的 ============ */
+PAGES.me=function(main){
+  header('我的','');
+  const rows=computeRows();const last=rows[rows.length-1];const T=today();const j=S.journals[T];
+  const items=[['timelog','✎','时间记录',last?'最近：'+fmtD(last.date)+' '+fmtT(last.end)+(last.end===2400?' 已结束':' 进行中'):'开始逐行记录'],['analysis','◔','时间分析','三级分类 · 月度 · 星期汇总'],['review','⟲','周复盘','计划 vs 实际'],['journal','✍','时间日志',j&&j.text?(j.draft?'今日草稿未保存':'今日已写'):'今日尚未书写'],['diary','☷','观察日记','按周沉淀洞察'],['calib','◎','目标感校准','本轮 PDCA 汇总与提示'],['projects','⧉','项目与任务','目标 → 项目 → 任务'],['focus','◷','番茄专注',S.timer?'进行中':S.sessions.length+' 条记录'],['path','⇅','目标路径','年 → 月 → 周 → 日'],['reviews','▤','历史复盘',''],['journals','▥','历史日志',''],['cats','⋮','时间分类设置','大类 › 小类 › 明细类'],['dict','Aa','自动分类词典','备注关键词 → 明细类'],['settings','⚙','设置','番茄 · 顺延 · 提醒 · 导出']];
+  main.innerHTML=`<div class="list menu">${items.map(([p,ic,n,m])=>`<div class="item" data-p="${p}" role="button" tabindex="0"><span class="ic">${ic}</span><div class="t"><div class="n">${n}</div>${m?`<div class="m">${esc(m)}</div>`:''}</div><span class="arr">›</span></div>`).join('')}</div>
+  <p class="hint mt16" style="text-align:center">数据保存在本机浏览器中 · 请定期在「设置」里导出备份</p>`;
+  $$('.item',main).forEach(el=>{el.onclick=()=>go(el.dataset.p,{});el.onkeydown=e=>{if(e.key==='Enter')el.onclick();};});
+};
+
+/* ============ 分类与词典设置 ============ */
+PAGES.cats=function(main){
+  header('时间分类','大类 › 小类 › 明细类');
+  main.innerHTML=`<p class="hint">与原表「时间分类」sheet 一致。明细类用「、」或逗号分隔；改名后旧记录中的分类会标红提示。</p>
+  ${S.cats.map((c,i)=>`<div class="card mt12" data-i="${i}"><div class="row"><input class="in" style="width:34%" value="${esc(c.c1)}" data-k="c1" aria-label="大类"><input class="in" style="width:30%" value="${esc(c.c2)}" data-k="c2" aria-label="小类"><span class="sp"></span><button class="iconbtn ghost" data-a="up" aria-label="上移">▲</button><button class="iconbtn ghost" data-a="dn" aria-label="下移">▼</button><button class="iconbtn ghost" data-a="del" aria-label="删除">✕</button></div><input class="in mt8" value="${esc(c.c3.join('、'))}" data-k="c3" aria-label="明细类"></div>`).join('')}
+  <div class="mt12"><button class="btn block sec2" id="add">+ 添加小类</button></div>`;
+  $$('.card[data-i]',main).forEach(card=>{const i=+card.dataset.i;const c=S.cats[i];
+    $$('input',card).forEach(inp=>inp.addEventListener('change',()=>{const k=inp.dataset.k;if(k==='c3')c.c3=inp.value.split(/[、,，;；\s]+/).map(s=>s.trim()).filter(Boolean);else c[k]=inp.value.trim();save();toast('已保存');}));
+    $('[data-a=del]',card).onclick=()=>confirmS('删除「'+c.c2+'」小类及其明细类？',()=>{S.cats.splice(i,1);save();render();});
+    $('[data-a=up]',card).onclick=()=>{if(i>0){[S.cats[i-1],S.cats[i]]=[S.cats[i],S.cats[i-1]];save();render();}};$('[data-a=dn]',card).onclick=()=>{if(i<S.cats.length-1){[S.cats[i+1],S.cats[i]]=[S.cats[i],S.cats[i+1]];save();render();}};});
+  $('#add').onclick=()=>{S.cats.push({c1:S.cats.length?S.cats[S.cats.length-1].c1:'中心工作时间',c2:'新小类',c3:[]});save();render();};
+};
+PAGES.dict=function(main){
+  header('自动分类词典','备注关键词');
+  main.innerHTML=`<p class="hint">备注中包含关键词时自动填充三级分类。匹配优先级：从上到下、从左到右；词典未命中时再按「明细类」完整文本匹配。</p>
+  ${S.dict.map((d,i)=>`<div class="card mt12" data-i="${i}"><div class="row"><select class="in" style="width:40%" data-k="c3" aria-label="明细类">${S.cats.flatMap(c=>c.c3).map(x=>`<option${x===d.c3?' selected':''}>${esc(x)}</option>`).join('')}${S.cats.flatMap(c=>c.c3).includes(d.c3)?'':`<option selected>${esc(d.c3)}</option>`}</select><input class="in" value="${esc(d.keys.join('、'))}" data-k="keys" aria-label="关键词"><button class="iconbtn ghost" data-a="up" aria-label="上移">▲</button><button class="iconbtn ghost" data-a="del" aria-label="删除">✕</button></div></div>`).join('')}
+  <div class="mt12"><button class="btn block sec2" id="add">+ 添加词条</button></div>
+  <div class="card mt16"><div class="small muted">测试备注</div><input class="in mt8" id="test" placeholder="输入一句备注试试，如：吃午饭"><div class="hint mt8" id="testOut">&nbsp;</div></div>`;
+  $$('.card[data-i]',main).forEach(card=>{const i=+card.dataset.i;const d=S.dict[i];
+    $('[data-k=c3]',card).onchange=e=>{d.c3=e.target.value;save();};$('[data-k=keys]',card).addEventListener('change',e=>{d.keys=e.target.value.split(/[、,，;；\s]+/).map(s=>s.trim()).filter(Boolean);save();toast('已保存');});
+    $('[data-a=del]',card).onclick=()=>{S.dict.splice(i,1);save();render();};$('[data-a=up]',card).onclick=()=>{if(i>0){[S.dict[i-1],S.dict[i]]=[S.dict[i],S.dict[i-1]];save();render();}};});
+  $('#add').onclick=()=>{S.dict.push({c3:S.cats[0]&&S.cats[0].c3[0]||'',keys:[]});save();render();};
+  $('#test').oninput=e=>{const a=autoClassify(e.target.value);$('#testOut').textContent=a?`→ ${a.c1} › ${a.c2} › ${a.c3}（${a.by}）`:'未命中';};
+};
+
+/* ============ 设置 / 导出 ============ */
+PAGES.settings=function(main){
+  header('设置','');const st=S.settings;
+  main.innerHTML=`<div class="card"><div class="f"><label>番茄时长选项（分钟，逗号分隔）</label><input class="in mono" id="po" value="${st.pomoOptions.join(',')}"></div><div class="f"><label>默认时长</label><input class="in mono" type="number" id="pdft" value="${st.pomoDefault}"></div><div class="f"><label>短休息（分钟）</label><input class="in mono" type="number" id="br" value="${st.breakMin}"></div>
+  <label class="row mt12"><input type="checkbox" id="dnd" ${st.dnd?'checked':''}> 专注中静默应用内提醒（勿扰）</label></div>
+  <div class="card mt12"><label class="row"><input type="checkbox" id="ro" ${st.rollover?'checked':''}> 未完成待办次日自动顺延</label><div class="f"><label>每晚日志提醒时间</label><input class="in" type="time" id="jr" value="${esc(st.journalRemind)}"></div><div class="row mt12"><button class="btn sm sec2" id="notif">${('Notification' in window)?(Notification.permission==='granted'?'系统通知已开启':'开启系统通知'):'此浏览器不支持系统通知'}</button><span class="hint">未开启时用应用内提示</span></div></div>
+  <div class="card mt12"><div class="sec-h"><h2>数据</h2></div><div class="row wrap"><button class="btn sm sec2" id="expJ">导出 JSON 备份</button><button class="btn sm sec2" id="expC">导出时间记录 CSV</button><button class="btn sm sec2" id="imp">导入 JSON</button></div><textarea class="in mt8 mono" id="io" style="min-height:120px;font-size:12px" placeholder="导出的内容会显示在这里，可全选复制；导入时把 JSON 粘贴到这里再点导入。"></textarea><div class="row mt8"><button class="btn sm sec2" id="copy">复制到剪贴板</button><button class="btn sm sec2" id="dl">尝试下载文件</button><span class="sp"></span><button class="btn sm danger" id="wipe">清空全部数据</button></div>
+  <div class="hint mt8">记录条数：${S.records.length} · 待办 ${S.todos.length} · 番茄 ${S.sessions.length}</div></div>
+  <div class="card mt12"><div class="sec-h"><h2>示例数据</h2></div><button class="btn sm sec2" id="demo">载入示例数据（追加）</button><div class="hint mt8">载入一天示例时间记录与几条目标，便于熟悉界面；示例备注带「[示例]」。</div></div>`;
+  $('#po').onchange=e=>{const arr=e.target.value.split(/[,，\s]+/).map(Number).filter(n=>n>0);if(arr.length){st.pomoOptions=arr;save();toast('已保存');}};
+  $('#pdft').onchange=e=>{st.pomoDefault=+e.target.value||20;save();};$('#br').onchange=e=>{st.breakMin=+e.target.value||5;save();};
+  $('#dnd').onchange=e=>{st.dnd=e.target.checked;save();};$('#ro').onchange=e=>{st.rollover=e.target.checked;save();if(st.rollover)rollover();};$('#jr').onchange=e=>{st.journalRemind=e.target.value;save();};
+  $('#notif').onclick=()=>{if(!('Notification' in window))return;Notification.requestPermission().then(()=>render());};
+  const io=$('#io');let fname='backup.json';
+  $('#expJ').onclick=()=>{io.value=JSON.stringify(S,null,1);fname='时间统计本-备份-'+today()+'.json';toast('已生成，可复制保存');};
+  $('#expC').onclick=()=>{const rows=computeRows();const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';io.value='日期,开始时间,结束时间,备注,大类,小类,明细类,花费时间(分钟),星期,周,校验\n'+rows.map(r=>[r.date,fmtT(r.start),fmtT(r.end),r.rec.note,r.rec.c1,r.rec.c2,r.rec.c3,r.dur,'星期'+WD[r.wd-1],r.week,r.isEnd?fmtHM(r.daySum):''].map(q).join(',')).join('\n');fname='时间日志-'+today()+'.csv';toast('CSV 已生成');};
+  $('#copy').onclick=()=>{io.select();try{navigator.clipboard.writeText(io.value).then(()=>toast('已复制'),()=>{document.execCommand('copy');toast('已复制');});}catch(e){document.execCommand('copy');toast('已复制');}};
+  $('#dl').onclick=()=>{try{const b=new Blob([io.value],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fname;document.body.appendChild(a);a.click();a.remove();toast('若未开始下载，请用「复制到剪贴板」');}catch(e){toast('下载不可用，请复制',true);}};
+  $('#imp').onclick=()=>{try{const o=JSON.parse(io.value);if(!o||!Array.isArray(o.records))throw new Error('格式不对');confirmS('导入将覆盖当前全部数据，继续？',()=>{S=Object.assign(blankState(),o);S.settings=Object.assign(blankState().settings,S.settings||{});save(true);toast('已导入');render();},'导入');}catch(e){toast('无法解析 JSON：'+e.message,true);}};
+  $('#wipe').onclick=()=>confirmS('清空全部数据？此操作不可恢复，请先导出备份。',()=>{S=blankState();S.onboarded=true;save(true);toast('已清空');setTab('year');},'清空');
+  $('#demo').onclick=()=>{loadDemo();toast('示例数据已载入');render();};
+};
+function loadDemo(){
+  const t=today();const y=t.slice(0,4);const g=grid('Y'+y);if(!g.core)g.core='创造';
+  const yg={0:'系统学习 AI 辅助合规工具开发',4:'完成独立咨询服务的第一版产品',7:'每周运动 3 次，睡眠 7 小时'};Object.keys(yg).forEach(k=>{if(!g.goals[k])g.goals[k]=yg[k];});
+  const mg=grid('M'+ymKey(t));if(!mg.core)mg.core='聚焦';if(!mg.goals[4])mg.goals[4]='完成 Payday Super 诊断报告模板\n约谈 2 位潜在客户';if(!mg.goals[0])mg.goals[0]='读完《时间统计法》并写 1 篇笔记';
+  if(!S.records.length){const d=dadd(t,-1);S.records.push({id:uid(),date:d,start:0,end:630,note:'[示例] 睡觉',c1:'事务性时间',c2:'睡觉',c3:'睡觉',src:'manual'});
+    [[700,'[示例] 洗漱','事务性时间','家务','洗漱'],[730,'[示例] 做饭吃早饭','事务性时间','吃饭','吃饭'],[830,'[示例] 交通','第二类时间','交通','交通'],[1200,'[示例] 写作：诊断报告模板','中心工作时间','中心工作','写作'],[1300,'[示例] 午饭','事务性时间','吃饭','吃饭'],[1730,'[示例] 工作沟通','中心工作时间','附加工作','工作沟通'],[1830,'[示例] 交通','第二类时间','交通','交通'],[1930,'[示例] 做饭 晚饭 洗碗','事务性时间','吃饭','做饭'],[2030,'[示例] 陪夫人散步','事务性时间','陪夫人','陪夫人'],[2130,'[示例] B站 视频','第二类时间','娱乐','上网'],[2200,'[示例] 时间统计','事务性时间','时间统计','时间统计'],[2400,'[示例] 睡觉','事务性时间','睡觉','睡觉']].forEach(([e,n,a,b,c])=>S.records.push({id:uid(),end:e,note:n,c1:a,c2:b,c3:c,src:'manual'}));}
+  if(!S.todos.length){['[示例] 整理诊断报告模板结构','[示例] 记录今天的时间日志','[示例] 运动 30 分钟'].forEach((x,i)=>S.todos.push({id:uid(),date:t,text:x,done:i===1,dim:['工作·事业','学习·成长','健康·身体'][i],order:i,status:'open',createdAt:Date.now()}));}
+  if(!S.habits.length)S.habits.push({id:uid(),name:'[示例] 晚间时间统计',days:[1,2,3,4,5,6,7],done:{[dadd(t,-1)]:true},since:dadd(t,-7)});
+  const wp=weekPlan(weekKey(t));if(!wp.days[1].length)wp.days[1].push({id:uid(),text:'[示例] 完成报告模板第一稿',done:false,dim:'工作·事业'});
+  S.onboarded=true;save(true);
+}
+
+/* ============ 提醒循环 ============ */
+function reminderTick(){
+  const now=new Date();const hm=pad(now.getHours())+':'+pad(now.getMinutes());const t=today();const key=t+' '+hm;const done=S.settings.notified||(S.settings.notified={});
+  const dnd=S.timer&&S.timer.phase==='focus'&&S.timer.running&&S.settings.dnd;
+  const fire=(id,msg)=>{if(done[id])return;done[id]=1;if(dnd)return;alertUser(msg);};
+  todosFor(t).forEach(x=>{if(!x.done&&x.remind===hm)fire('todo:'+x.id+':'+t,'待办提醒：'+x.text);});
+  if(hm===S.settings.journalRemind&&!(S.journals[t]&&S.journals[t].text&&!S.journals[t].draft))fire('journal:'+t,'该写今天的时间日志了');
+  Object.keys(done).forEach(k=>{if(!k.includes(t))delete done[k];});save();
+}
+
+/* ============ 启动 ============ */
+function boot(){
+  load();rollover();
+  try{const tb=localStorage.getItem(STORE_KEY+'_tab');if(tb&&['year','month','day','me'].includes(tb))ROUTE.tab=tb;}catch(e){}
+  if(!S.onboarded){const ob=document.createElement('div');ob.className='ob';ob.innerHTML=`<h1>时间统计本</h1><p>以 PDCA 闭环管理时间：九宫格定目标，日清单执行，番茄专注，行式时间日志记录 24 小时，周复盘与观察日记调整。数据只保存在本机浏览器。</p><div class="acts"><button class="btn" id="obDemo">载入示例数据看看</button><button class="btn sec2" id="obBlank">从空白开始</button></div>`;document.body.appendChild(ob);
+    $('#obDemo').onclick=()=>{loadDemo();ob.remove();render();};$('#obBlank').onclick=()=>{S.onboarded=true;save(true);ob.remove();render();};}
+  render();if(S.timer)ensureTick();setInterval(reminderTick,30000);
+  window.addEventListener('beforeunload',()=>save(true));
+}
+boot();
+</script>
